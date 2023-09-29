@@ -74,7 +74,7 @@ The Spreadsheet Previewer was contributed by [anncie-pcss](https://github.com/an
 
 [Max Planck Digital Library](https://github.com/MPDL) contributed the ZIP Previewer.
 
-[erykkul](https://github.com/erykkul) contributed the Markdown (MD) Previewer.
+[erykkul](https://github.com/erykkul) contributed the Markdown (MD) Previewer and the RO-Crate previewer.
 
 ## How can I help?
 
