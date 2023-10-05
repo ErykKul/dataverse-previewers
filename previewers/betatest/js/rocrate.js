@@ -3,8 +3,7 @@ $(document).ready(function () {
 });
 
 function translateBaseHtmlPage() {
-    var mdPreviewText = $.i18n("mdPreviewText");
-    $('.mdPreviewText').text(mdPreviewText);
+    $('.rocratePreviewText').text($.i18n("rocratePreviewText"));
 }
 
 function writeContentAndData(data, fileUrl, file, title, authors) {
@@ -15,9 +14,7 @@ function writeContentAndData(data, fileUrl, file, title, authors) {
     s1.text = data;
     scripts.append(s1);
     var s2 = document.createElement("script");
-    s2.src = "https://unpkg.com/ro-crate-html-js/dist/ro-crate-dynamic.js";
+    s2.type = "text/javascript";
+    s2.src = "js/ro-crate-dynamic.js";
     scripts.append(s2);
-    var s3 = document.createElement("script");
-    s3.text = "setTimeout(function(){ onload(); }, 5000);";
-    scripts.append(s3);
 }
