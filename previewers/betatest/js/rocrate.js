@@ -18,6 +18,6 @@ function writeContentAndData(data, fileUrl, file, title, authors) {
     s2.src = "https://unpkg.com/ro-crate-html-js/dist/ro-crate-dynamic.js";
     scripts.append(s2);
     var s3 = document.createElement("script");
-    s3.text = "window.onload();";
+    s3.text = "setTimeout(function(){ onload(); }, 5000);";
     scripts.append(s3);
 }
