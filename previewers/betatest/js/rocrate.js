@@ -15,7 +15,9 @@ function writeContentAndData(data, fileUrl, file, title, authors) {
     s1.text = data;
     scripts.append(s1);
     var s2 = document.createElement("script");
-    s2.type = "text/javascript";
-    s2.src = "js/ro-crate-dynamic.js";
+    s2.src = "https://unpkg.com/ro-crate-html-js/dist/ro-crate-dynamic.js";
     scripts.append(s2);
+    var s3 = document.createElement("script");
+    s3.text = "window.onload();";
+    scripts.append(s3);
 }
