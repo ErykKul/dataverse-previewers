@@ -421,7 +421,7 @@ copied from https://unpkg.com/ro-crate-html-js@1.4.19/dist/ro-crate-dynamic.js (
               }
               }   
           } else if ( types.includes("File") || types.includes("ImageObject") || types.includes("MediaObject") || path === "ro-crate-metadata.jsonld"){
-              view = "⬇️ Download: ";
+              //view = "⬇️ Download: ";
           } 
           if (view){
              idLink += `<a href="${path}">${view}</a>`; 
@@ -484,13 +484,13 @@ copied from https://unpkg.com/ro-crate-html-js@1.4.19/dist/ro-crate-dynamic.js (
                   previews += `<iframe src='${p}' width='100%' height='500'></iframe>`;
               } else if (p.match(/(\.mp3)|(\.ogg?)|(\.wav)$/i)){
                 previews += `<audio controls><source src='${p}'/></audio>`;
-              } else if (p.match(/(\.jpe?g)|(\.png)$/i)){
+              } /*else if (p.match(/(\.jpe?g)|(\.png)$/i)){
                  previews += `<img width='100%' style='object-fit: contain' src='${p}'/>`;
                } 
                else if (p.match(/pdf$/i)){
                   previews += `<embed  src="${p}" type="application/pdf" width="100%" height="600px" />`;
                     
-               } 
+               } */
           }
           return previews;
       }
