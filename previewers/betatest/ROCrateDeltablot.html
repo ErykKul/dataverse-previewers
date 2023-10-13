@@ -5,6 +5,7 @@
     <title class="rocratePreviewText">RO-Crate Preview</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script type="text/javascript" src="js/xss.js"></script>
+    <script type="module" src="js/rocrate-deltablot-module.js"></script>
     <script src="js/rocrate-deltablot.js"></script>
     <script src="lib/jquery.i18n.js"></script>
     <script src="lib/jquery.i18n.messagestore.js"></script>
@@ -46,11 +47,6 @@
         <div class='preview-container'>
             <div class='preview-header'></div>
             <div class='preview'>
-                <script type="module">
-                    import { Builder } from 'https://unpkg.com/@deltablot/ro-crate2html@0.1.0/dist/main.js';
-                    const deltablot = {};
-                    deltablot.Builder = Builder;
-                </script>
                 <div id='ro-crate-metadata'></div>
             </div>
         </div>
