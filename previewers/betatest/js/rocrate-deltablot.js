@@ -11,7 +11,7 @@ function translateBaseHtmlPage() {
 }
 
 function writeContentAndData(data, fileUrl, file, title, authors) {
-    const builder = new deltablot.Builder();
+    const builder = new Builder();
     const result = builder.parse(data);
     const targetDiv = document.getElementById('ro-crate-metadata');
     result.forEach(el => targetDiv.appendChild(el));
