@@ -21,12 +21,11 @@ function writeContent(fileUrl, file, title, authors) {
         reader.onload = function (e) {
             const csv = e.target.result;
             const data = Papa.parse(csv, {
+                headers: true,
                 skipEmptyLines: true,
                 quoteChar: '"',
                 delimitersToGuess: ['\t', ',']
             });
-            // separate table header row from other rows
-            const headers = data.data.shift();
 
             handsontableContainer.innerHTML = '';
             handsontableContainer.className = '';
@@ -34,7 +33,7 @@ function writeContent(fileUrl, file, title, authors) {
             Handsontable(handsontableContainer, {
                 data: data.data,
                 rowHeaders: true,
-                colHeaders: headers,
+                colHeaders: data.meta.fields,
                 columnSorting: true
             })
         }
