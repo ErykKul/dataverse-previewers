@@ -3,29 +3,30 @@ $(document).ready(function () {
 });
 
 function translateBaseHtmlPage() {
-    var spreadsheetViewerText = $.i18n("spreadsheetViewerText");
+    const spreadsheetViewerText = $.i18n("spreadsheetViewerText");
     $('.spreadsheetViewerText').text(spreadsheetViewerText);
 }
 
 function writeContent(fileUrl, file, title, authors) {
     addStandardPreviewHeader(file, title, authors);
 
-    var handsontableContainer = document.getElementById('handsontable-container');
-    var request = new XMLHttpRequest();
+    const handsontableContainer = document.getElementById('handsontable-container');
+    const request = new XMLHttpRequest();
 
     request.open('GET', fileUrl, true);
     request.responseType = 'blob';
     request.onload = function () {
-        var reader = new FileReader()
+        const reader = new FileReader()
 
         reader.onload = function (e) {
-            var csv = e.target.result;
-            var data = Papa.parse(csv, {
-                header: true,
+            const csv = e.target.result;
+            const data = Papa.parse(csv, {
                 skipEmptyLines: true,
                 quoteChar: '"',
                 delimitersToGuess: ['\t', ',']
-            })
+            });
+            // separate table header row from other rows
+            const headers = data.data.shift();
 
             handsontableContainer.innerHTML = '';
             handsontableContainer.className = '';
@@ -33,7 +34,7 @@ function writeContent(fileUrl, file, title, authors) {
             Handsontable(handsontableContainer, {
                 data: data.data,
                 rowHeaders: true,
-                colHeaders: Object.keys(data.data[0]),
+                colHeaders: headers,
                 columnSorting: true
             })
         }
