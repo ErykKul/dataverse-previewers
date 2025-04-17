@@ -21,7 +21,7 @@ function writeContent(fileUrl, file, title, authors) {
         reader.onload = function (e) {
             const csv = e.target.result;
             const data = Papa.parse(csv, {
-                headers: true,
+                header: true,
                 skipEmptyLines: true,
                 quoteChar: '"',
                 delimitersToGuess: ['\t', ',']
