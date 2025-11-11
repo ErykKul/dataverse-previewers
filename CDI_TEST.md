@@ -9,12 +9,13 @@ This guide provides complete instructions for testing the DDI-CDI (Data Document
 1. [About DDI-CDI](#about-ddi-cdi)
 2. [MIME Type Specification](#mime-type-specification)
 3. [Installation Prerequisites](#installation-prerequisites)
-4. [Installing the CDI Previewer](#installing-the-cdi-previewer)
-5. [Installing the CDI Upload Tool](#installing-the-cdi-upload-tool)
-6. [Testing with Example Files](#testing-with-example-files)
-7. [Using the Previewer](#using-the-previewer)
-8. [Editing CDI Files](#editing-cdi-files)
-9. [Troubleshooting](#troubleshooting)
+4. [Installing the CDI Exporter](#installing-the-cdi-exporter-optional)
+5. [Installing the CDI Previewer](#installing-the-cdi-previewer)
+6. [Installing the CDI Upload Tool](#installing-the-cdi-upload-tool)
+7. [Testing with Example Files](#testing-with-example-files)
+8. [Using the Previewer](#using-the-previewer)
+9. [Editing CDI Files](#editing-cdi-files)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -70,20 +71,22 @@ application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.
 
 ### Setting MIME Type in Dataverse
 
-When uploading CDI files to Dataverse, you may need to set the MIME type manually if it's not detected automatically:
+When uploading CDI files to Dataverse, you **must** set the MIME type with the DDI-CDI profile to ensure the file is recognized as CDI metadata (not just generic JSON-LD):
 
 **Via Web Interface:**
 1. Upload the file
 2. Go to File → Edit Files → File Metadata
-3. Set MIME Type to `application/ld+json`
+3. Set MIME Type to: `application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"`
 
 **Via API:**
 ```bash
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
   -F 'file=@SimpleSample.jsonld' \
-  -F 'jsonData={"description":"CDI metadata file","categories":["Data"],"mimeType":"application/ld+json"}' \
+  -F 'jsonData={"description":"CDI metadata file","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
   "$SERVER_URL/api/datasets/:persistentId/add?persistentId=$DATASET_PID"
 ```
+
+**Important:** The profile parameter is essential to distinguish CDI files from other JSON-LD files in your dataset.
 
 ---
 
@@ -103,6 +106,107 @@ Before installing the CDI tools, ensure you have:
 3. **Test Dataset**
    - Create or identify a dataset for testing
    - Note the dataset's persistent identifier (DOI or Handle)
+
+---
+
+## Installing the CDI Exporter (Optional)
+
+The CDI Exporter is a metadata export format that provides DDI-CDI JSON-LD output. It can either export existing CDI files from the dataset or generate CDI metadata automatically from the dataset's metadata.
+
+**Note:** This requires the exporter-transformer framework. If you already have it installed, skip to the download commands below.
+
+### Install exporter-transformer Framework (if needed)
+
+First, configure the exporter directory in Dataverse:
+
+```bash
+# Set the exporter directory path (adjust as needed)
+export EXPORTERS_DIR=/usr/local/dataverse/exporters
+
+# Create the directory
+sudo mkdir -p $EXPORTERS_DIR
+sudo chown dataverse:dataverse $EXPORTERS_DIR
+
+# Configure Dataverse to use this directory
+curl -X PUT -d "$EXPORTERS_DIR" \
+  "$SERVER_URL/api/admin/settings/:dataverse-spi-exporters-directory"
+```
+
+### Download and Install CDI Exporter
+
+```bash
+# Navigate to your exporters directory
+cd $EXPORTERS_DIR
+
+# Download the exporter-transformer JAR file (if not already present)
+wget -O exporter-transformer-1.0.10-jar-with-dependencies.jar \
+  https://repo1.maven.org/maven2/io/gdcc/export/exporter-transformer/1.0.10/exporter-transformer-1.0.10-jar-with-dependencies.jar
+
+# Create the CDI exporter directory
+mkdir -p cdi-exporter
+
+# Download the CDI exporter configuration
+wget -O cdi-exporter/config.json \
+  https://raw.githubusercontent.com/gdcc/exporter-transformer/main/examples/cdi-exporter/config.json
+
+# Download the CDI exporter transformer script
+wget -O cdi-exporter/transformer.py \
+  https://raw.githubusercontent.com/gdcc/exporter-transformer/main/examples/cdi-exporter/transformer.py
+
+# Restart Dataverse
+sudo systemctl restart dataverse
+```
+
+### Verify Installation
+
+After restarting Dataverse, the CDI export format should be available:
+
+```bash
+# Check if the exporter is available
+curl "$SERVER_URL/api/datasets/:persistentId/versions/:latest/metadata?persistentId=$DATASET_PID"
+```
+
+Look for "DDI-CDI (Cross Domain Integration)" in the available export formats.
+
+### Using the CDI Exporter
+
+**Export via API:**
+
+```bash
+export SERVER_URL=https://your-dataverse-instance.org
+export DATASET_PID=doi:10.xxxxx/xxxxx
+
+# Export CDI metadata
+curl "$SERVER_URL/api/datasets/export?exporter=cdi&persistentId=$DATASET_PID" \
+  -o dataset-cdi.jsonld
+```
+
+**Export via Web Interface:**
+
+1. Navigate to your dataset page
+2. Click on the **"Export"** button
+3. Select **"DDI-CDI (Cross Domain Integration)"** from the list
+4. The CDI JSON-LD file will download automatically
+
+### How the CDI Exporter Works
+
+The exporter operates in two modes:
+
+1. **Primary Mode - Export Existing CDI File:**
+   - Searches for `.jsonld` files with `application/ld+json` MIME type
+   - Returns the most recent CDI file if found
+   - Preserves manually curated CDI metadata
+
+2. **Fallback Mode - Generate CDI Metadata:**
+   - Activated when no CDI file exists in the dataset
+   - Generates DDI-CDI JSON-LD from dataset metadata
+   - Includes:
+     - Dataset description (title, creators, keywords, license, etc.)
+     - DataStore entries for each file (with checksums)
+     - Variable definitions (with proper data types)
+     - Proper DDI-CDI ontology structure
+
+This dual approach ensures datasets with curated CDI metadata are preserved while providing automatic generation for others.
 
 ---
 
@@ -135,7 +239,7 @@ curl -X POST -H 'Content-type: application/json' \
         {"locale":"{localeCode}"}
       ]
     },
-  "contentType":"application/ld+json",
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\"",
   "allowedApiCalls": [
     {
       "name": "retrieveFileContents",
@@ -191,7 +295,7 @@ curl -X POST -H 'Content-type: application/json' \
         {"locale":"{localeCode}"}
       ]
     },
-  "contentType":"application/ld+json"
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""
 }'
 ```
 
@@ -317,7 +421,7 @@ export DATASET_PID=doi:10.xxxxx/xxxxx
 # Upload SimpleSample.jsonld
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
   -F 'file=@SimpleSample.jsonld' \
-  -F 'jsonData={"description":"CDI Sample Dataset Metadata","categories":["Data"],"mimeType":"application/ld+json"}' \
+  -F 'jsonData={"description":"CDI Sample Dataset Metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
   "$SERVER_URL/api/datasets/:persistentId/add?persistentId=$DATASET_PID"
 ```
 
@@ -331,7 +435,7 @@ curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
 6. After upload, edit the file metadata:
    - Go to the file page
    - Click **"Edit Files"** → **"File Metadata"**
-   - Set MIME Type: `application/ld+json`
+   - Set MIME Type: `application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"`
    - Save
 
 **Tip:** If you installed the optional test upload tool, you can use **"Edit Dataset"** → **"Add CDI Test Files"** to quickly add example files without manual download.
@@ -428,10 +532,12 @@ POST /api/files/{fileId}/replace
 **Problem:** Preview icon doesn't show up for CDI files
 
 **Solutions:**
-1. Check MIME type is set to `application/ld+json`
+1. Check MIME type is set to the full CDI profile: `application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"`
 2. Verify external tool is installed: `curl $SERVER_URL/api/admin/externalTools`
 3. Check browser console for errors
 4. Ensure file has been saved (not just uploaded)
+
+**Note:** The MIME type must include the DDI-CDI profile to distinguish CDI files from other JSON-LD files.
 
 ### CORS Errors
 
@@ -502,6 +608,7 @@ POST /api/files/{fileId}/replace
 - SHACL Shapes: https://github.com/Cross-Domain-Interoperability-Framework/validation
 - shacl-form Library: https://github.com/ULB-Darmstadt/shacl-form
 - Dataverse External Tools API: https://guides.dataverse.org/en/latest/api/external-tools.html
+- Exporter Transformer: https://github.com/gdcc/exporter-transformer
 
 ### Example Files Location
 - GitHub Repository: https://github.com/ErykKul/dataverse-previewers
@@ -535,8 +642,14 @@ curl "$SERVER_URL/api/files/$FILE_ID/metadata"
 ### Update File MIME Type
 ```bash
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
-  -F 'jsonData={"mimeType":"application/ld+json"}' \
+  -F 'jsonData={"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
   "$SERVER_URL/api/files/$FILE_ID/metadata"
+```
+
+### Export Dataset as CDI
+```bash
+curl "$SERVER_URL/api/datasets/export?exporter=cdi&persistentId=$DATASET_PID" \
+  -o dataset-cdi.jsonld
 ```
 
 ---
