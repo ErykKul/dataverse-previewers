@@ -2,20 +2,238 @@
 
 ## Overview
 
-This guide provides complete instructions for testing the DDI-CDI (Data Documentation Initiative - Cross Domain Integration) previewer and external tool with a Dataverse installation. The CDI previewer provides standards-compliant viewing and editing of DDI-CDI metadata files using official SHACL shapes.
+This guide provides complete instructions for testing the DDI-CDI (Data Documentation Initiative - Cross Domain Integration) ecosystem with a Dataverse installation. The CDI ecosystem consists of three integrated components:
+
+### 1. **CDI Exporter** (Optional)
+A metadata export format that automatically generates or exports DDI-CDI JSON-LD for datasets. It can:
+- Export existing CDI files from datasets (preserving curated metadata)
+- Auto-generate rich CDI metadata from Dataverse metadata when no CDI file exists
+- Provides harvestable DDI-CDI metadata for OAI-PMH
+
+### 2. **CDI Previewer** (Core Component)
+A standards-compliant viewer and editor for DDI-CDI files that:
+- Displays CDI metadata using official SHACL shapes from the Cross-Domain Interoperability Framework
+- Provides structured, validated forms for viewing metadata
+- Allows editing CDI files directly in the browser
+- Saves changes back to Dataverse via API
+- Works with any `.jsonld` file that has the DDI-CDI MIME type profile
+
+### 3. **CDI Test Upload Tool** (Testing Only)
+A simplified testing tool for quickly adding example CDI files:
+- Provides radio-button selection of 5 example CDI files
+- Automatically sets correct MIME type with DDI-CDI profile
+- Downloads examples from GitHub Pages and uploads to dataset
+- **Note:** For production use, upload CDI files through standard Dataverse interface
+
+All components work together to provide a complete workflow: export/generate CDI metadata → upload to datasets → view and edit with SHACL validation → save back to Dataverse.
+
+---
+
+## Quick Start
+
+This section provides all the commands needed to install all three CDI components on a Dataverse instance.
+
+### Prerequisites
+
+```bash
+# Set your environment variables
+export SERVER_URL=https://your-dataverse-instance.org
+export API_TOKEN=your-api-token-here
+export DATASET_PID=doi:10.xxxxx/xxxxx  # For testing
+export EXPORTERS_DIR=/usr/local/dataverse/exporters  # Adjust as needed
+```
+
+### Step 1: Install CDI Exporter (Optional but Recommended)
+
+```bash
+# Configure exporter directory (skip if already configured)
+sudo mkdir -p $EXPORTERS_DIR
+sudo chown dataverse:dataverse $EXPORTERS_DIR
+curl -X PUT -d "$EXPORTERS_DIR" \
+  "$SERVER_URL/api/admin/settings/:dataverse-spi-exporters-directory"
+
+# Navigate to exporters directory
+cd $EXPORTERS_DIR
+
+# Download exporter-transformer JAR (if not already present)
+wget -O exporter-transformer-1.0.10-jar-with-dependencies.jar \
+  https://repo1.maven.org/maven2/io/gdcc/export/exporter-transformer/1.0.10/exporter-transformer-1.0.10-jar-with-dependencies.jar
+
+# Create and configure CDI exporter
+mkdir -p cdi-exporter
+wget -O cdi-exporter/config.json \
+  https://raw.githubusercontent.com/gdcc/exporter-transformer/main/examples/cdi-exporter/config.json
+wget -O cdi-exporter/transformer.py \
+  https://raw.githubusercontent.com/gdcc/exporter-transformer/main/examples/cdi-exporter/transformer.py
+```
+
+### Step 2: Install CDI Previewer (Required)
+
+**For Dataverse 6.1+ (with signed URLs - Recommended):**
+
+```bash
+curl -X POST -H 'Content-type: application/json' \
+  -H "X-Dataverse-key:$API_TOKEN" \
+  "$SERVER_URL/api/admin/externalTools" \
+  -d '{
+  "displayName":"View CDI Metadata",
+  "description":"View and edit DDI Cross-Domain Integration (CDI) metadata file using SHACL shapes.",
+  "toolName":"cdiPreviewer",
+  "scope":"file",
+  "types":["preview", "explore"],
+  "toolUrl":"https://erykkul.github.io/dataverse-previewers/previewers/betatest/CdiPreview.html",
+  "toolParameters": {
+      "queryParameters":[
+        {"fileid":"{fileId}"},
+        {"siteUrl":"{siteUrl}"},
+        {"datasetid":"{datasetId}"},
+        {"datasetversion":"{datasetVersion}"},
+        {"locale":"{localeCode}"}
+      ]
+    },
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\"",
+  "allowedApiCalls": [
+    {
+      "name": "retrieveFileContents",
+      "httpMethod": "GET",
+      "urlTemplate": "/api/v1/access/datafile/{fileId}?gbrecs=true",
+      "timeOut": 3600
+    },
+    {
+      "name": "downloadFile",
+      "httpMethod": "GET",
+      "urlTemplate": "/api/v1/access/datafile/{fileId}?gbrecs=false",
+      "timeOut": 3600
+    },
+    {
+      "name": "getDatasetVersionMetadata",
+      "httpMethod": "GET",
+      "urlTemplate": "/api/v1/datasets/{datasetId}/versions/{datasetVersion}",
+      "timeOut": 3600
+    },
+    {
+      "name": "replaceFile",
+      "httpMethod": "POST",
+      "urlTemplate": "/api/files/{fileId}/replace",
+      "timeOut": 3600
+    }
+  ]
+}'
+```
+
+**For Dataverse 5.2-6.0 (with API tokens):**
+
+```bash
+curl -X POST -H 'Content-type: application/json' \
+  -H "X-Dataverse-key:$API_TOKEN" \
+  "$SERVER_URL/api/admin/externalTools" \
+  -d '{
+  "displayName":"View CDI Metadata",
+  "description":"View and edit DDI Cross-Domain Integration (CDI) metadata file using SHACL shapes.",
+  "toolName":"cdiPreviewer",
+  "scope":"file",
+  "types":["preview", "explore"],
+  "toolUrl":"https://erykkul.github.io/dataverse-previewers/previewers/betatest/CdiPreview.html",
+  "toolParameters": {
+      "queryParameters":[
+        {"fileid":"{fileId}"},
+        {"siteUrl":"{siteUrl}"},
+        {"key":"{apiToken}"},
+        {"datasetid":"{datasetId}"},
+        {"datasetversion":"{datasetVersion}"},
+        {"locale":"{localeCode}"}
+      ]
+    },
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""
+}'
+```
+
+### Step 3: Install CDI Test Upload Tool (Optional - Testing Only)
+
+```bash
+curl -X POST -H 'Content-type: application/json' \
+  -H "X-Dataverse-key:$API_TOKEN" \
+  "$SERVER_URL/api/admin/externalTools" \
+  -d '{
+  "displayName": "Add CDI Test Files",
+  "description": "Testing tool: Add example DDI-CDI files to this dataset. This is a simplified tool for testing the CDI previewer - not for production use.",
+  "toolName": "cdiTestUploadTool",
+  "scope": "dataset",
+  "types": ["configure"],
+  "toolUrl": "https://erykkul.github.io/dataverse-previewers/examples/cdi/cdi-upload-tool.html",
+  "toolParameters": {
+    "queryParameters": [
+      {"datasetid": "{datasetId}"},
+      {"datasetversion": "{datasetVersion}"},
+      {"siteUrl": "{siteUrl}"}
+    ]
+  }
+}'
+```
+
+### Step 4: Configure CORS (Required for GitHub Pages hosted tools)
+
+```bash
+curl -X PUT -d 'https://erykkul.github.io' \
+  "$SERVER_URL/api/admin/settings/:CorsAllowedOrigins"
+```
+
+### Step 5: Restart Dataverse
+
+```bash
+# Restart to load the exporter
+sudo systemctl restart dataverse
+# Or if using Payara directly:
+# sudo systemctl restart payara
+```
+
+### Step 6: Verify Installation
+
+```bash
+# Check external tools
+curl "$SERVER_URL/api/admin/externalTools"
+
+# Check exporter (after restart)
+curl "$SERVER_URL/api/datasets/export?exporter=cdi&persistentId=$DATASET_PID" \
+  -o test-cdi-export.jsonld
+```
+
+### Step 7: Test with Example File
+
+```bash
+# Download an example
+curl -O https://erykkul.github.io/dataverse-previewers/examples/cdi/SimpleSample.jsonld
+
+# Upload to dataset with correct MIME type
+curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
+  -F 'file=@SimpleSample.jsonld' \
+  -F 'jsonData={"description":"CDI Sample Dataset Metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
+  "$SERVER_URL/api/datasets/:persistentId/add?persistentId=$DATASET_PID"
+
+# View in browser: go to dataset page and click preview icon on the file
+```
+
+**You're all set!** You now have:
+- ✅ CDI Exporter generating/exporting DDI-CDI metadata
+- ✅ CDI Previewer for viewing and editing CDI files
+- ✅ Test upload tool for quickly adding example files
+- ✅ Complete workflow from export to edit to save
+
+---
 
 ## Table of Contents
 
 1. [About DDI-CDI](#about-ddi-cdi)
 2. [MIME Type Specification](#mime-type-specification)
-3. [Installation Prerequisites](#installation-prerequisites)
-4. [Installing the CDI Exporter](#installing-the-cdi-exporter-optional)
-5. [Installing the CDI Previewer](#installing-the-cdi-previewer)
-6. [Installing the CDI Upload Tool](#installing-the-cdi-upload-tool)
-7. [Testing with Example Files](#testing-with-example-files)
-8. [Using the Previewer](#using-the-previewer)
-9. [Editing CDI Files](#editing-cdi-files)
-10. [Troubleshooting](#troubleshooting)
+3. [Quick Start](#quick-start)
+4. [Installation Prerequisites](#installation-prerequisites)
+5. [Installing the CDI Exporter](#installing-the-cdi-exporter-optional)
+6. [Installing the CDI Previewer](#installing-the-cdi-previewer)
+7. [Installing the CDI Upload Tool](#installing-the-cdi-upload-tool)
+8. [Testing with Example Files](#testing-with-example-files)
+9. [Using the Previewer](#using-the-previewer)
+10. [Editing CDI Files](#editing-cdi-files)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
