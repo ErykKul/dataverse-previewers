@@ -215,8 +215,21 @@ async function renderWithShaclForm(jsonData) {
     shaclFormElement.setAttribute('data-collapse', 'open');
     shaclFormElement.setAttribute('data-language', locale || 'en');
     
-    // Don't set data-values-subject - let shacl-form auto-detect the root from SHACL shapes
-    // The SHACL shapes define targets (e.g., schema:Dataset) that will be matched automatically
+    // Explicitly set the shape subject to avoid ambiguity when multiple root shapes exist
+    shaclFormElement.setAttribute('data-shape-subject', 'https://cdif.org/validation/0.1/shacl#CDIFDatasetRecommendedShape');
+    
+    // Try to detect the root dataset subject from the data
+    if (jsonData['@graph']) {
+        const datasets = jsonData['@graph'].filter(node => {
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            return types && types.some(t => t === 'schema:Dataset' || t === 'http://schema.org/Dataset');
+        });
+        
+        if (datasets.length > 0 && datasets[0]['@id']) {
+            console.log('[CDI Previewer] Setting data-values-subject to:', datasets[0]['@id']);
+            shaclFormElement.setAttribute('data-values-subject', datasets[0]['@id']);
+        }
+    }
     
     console.log('[CDI Previewer] JSON-LD data loaded:', jsonData);
     console.log('[CDI Previewer] Looking for schema:Dataset nodes...');
