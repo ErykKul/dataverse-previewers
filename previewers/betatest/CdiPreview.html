@@ -1,0 +1,87 @@
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title class="cdiPreviewText">CDI Preview</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript" src="js/xss.js"></script>
+    <script type="module" src="js/shacl-form.js"></script>
+    <script src="lib/jquery.i18n.js"></script>
+    <script src="lib/jquery.i18n.messagestore.js"></script>
+    <script src="lib/jquery.i18n.language.js"></script>
+    <script type="text/javascript" src="js/retriever.js"></script>
+    <script type="text/javascript" src="js/cdi.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
+        integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+    <link type="text/css" rel="stylesheet" href="css/preview.css" />
+    <style>
+        .cdi-form-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .preview-info {
+            padding: 15px;
+            background-color: #d9edf7;
+            border: 1px solid #bce8f1;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            color: #31708f;
+        }
+        
+        .preview-info p {
+            margin: 5px 0;
+        }
+        
+        .preview-info strong {
+            font-size: 1.2em;
+        }
+        
+        shacl-form {
+            display: block;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body class="container">
+    <main><img id='logo' alt='Site Logo'>
+        <h1 class="page-title cdiPreviewText">CDI Preview</h1>
+        
+        <!-- Edit/Save toolbar -->
+        <div class="edit-toolbar" style="margin-bottom: 20px; padding: 15px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; display: none;">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="api-token-input">API Token (required for saving):</label>
+                        <input type="password" id="api-token-input" class="form-control" placeholder="Enter your Dataverse API token">
+                        <small class="help-block">Your API token is required to save changes back to Dataverse.</small>
+                    </div>
+                </div>
+                <div class="col-md-6" style="padding-top: 25px;">
+                    <button id="toggle-edit-btn" class="btn btn-primary">
+                        <span class="glyphicon glyphicon-edit"></span> Enable Editing
+                    </button>
+                    <button id="save-btn" class="btn btn-success" style="display: none;">
+                        <span class="glyphicon glyphicon-floppy-disk"></span> Save Changes
+                    </button>
+                    <span id="save-status" style="margin-left: 10px;"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class='preview-container'>
+            <div class='preview-header'></div>
+            <div class='preview'></div>
+        </div>
+    </main>
+</body>
+
+</html>
