@@ -197,34 +197,11 @@ async function renderWithShaclForm(jsonData) {
     shaclFormElement.setAttribute('data-collapse', 'open');
     shaclFormElement.setAttribute('data-language', locale || 'en');
     
-    // Determine the root subject from the JSON-LD
-    let rootSubject = findRootSubject(jsonData);
-    if (rootSubject) {
-        shaclFormElement.setAttribute('data-values-subject', rootSubject);
-    }
+    // Don't set data-values-subject - let shacl-form auto-detect the root from SHACL shapes
+    // The SHACL shapes define targets (e.g., schema:Dataset) that will be matched automatically
 
     // Create a container for the form
     const formContainer = $('<div/>').addClass('cdi-form-container');
     formContainer.append(shaclFormElement);
     $('.preview').append(formContainer);
-}
-
-function findRootSubject(jsonData) {
-    if (jsonData['@graph'] && Array.isArray(jsonData['@graph']) && jsonData['@graph'].length > 0) {
-        const rootNode = jsonData['@graph'].find(node => {
-            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
-            return types.some(t => 
-                t === 'WideDataSet' || 
-                t === 'schema:Dataset' ||
-                t === 'Dataset' ||
-                t.includes('Dataset')
-            );
-        });
-        if (rootNode && rootNode['@id']) {
-            return rootNode['@id'];
-        }
-    } else if (jsonData['@id']) {
-        return jsonData['@id'];
-    }
-    return null;
 }
