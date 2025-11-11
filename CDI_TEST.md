@@ -14,9 +14,31 @@ This guide covers installation and testing of the DDI-CDI (Data Documentation In
 
 ## Quick Start
 
+### Option 1: Using rdm-integration (Easiest for Testing)
+
+If you want a complete local Dataverse test environment with CDI support:
+
+```bash
+# Clone the rdm-integration repository
+git clone https://github.com/libis/rdm-integration.git
+cd rdm-integration
+
+# Start Dataverse (this will initialize everything)
+make up
+
+# Install CDI support
+make add-cdi-support
+```
+
+This sets up a complete local Dataverse instance at `http://localhost:8080` with CDI previewer, test upload tool, and CORS pre-configured. You can then create a dataset and test the CDI functionality immediately.
+
+See the [rdm-integration repository](https://github.com/libis/rdm-integration) for more details about the local development environment.
+
+### Option 2: Manual Installation on Existing Dataverse
+
 Complete installation with copy-paste commands:
 
-### Set Environment Variables
+#### Set Environment Variables
 
 ```bash
 export SERVER_URL=https://your-dataverse-instance.org
@@ -25,7 +47,7 @@ export DATASET_PID=doi:10.xxxxx/xxxxx
 export EXPORTERS_DIR=/usr/local/dataverse/exporters
 ```
 
-### Install CDI Exporter (Optional)
+#### Install CDI Exporter (Optional)
 
 ```bash
 # Configure exporter directory
@@ -48,7 +70,7 @@ wget -O cdi-exporter/transformer.py \
   https://raw.githubusercontent.com/gdcc/exporter-transformer/main/examples/cdi-exporter/transformer.py
 ```
 
-### Install CDI Previewer (Required)
+#### Install CDI Previewer (Required)
 
 **For Dataverse 6.1+ (Recommended):**
 
@@ -129,7 +151,7 @@ curl -X POST -H 'Content-type: application/json' \
 }'
 ```
 
-### Install Test Upload Tool (Optional)
+#### Install Test Upload Tool (Optional)
 
 ```bash
 curl -X POST -H 'Content-type: application/json' \
@@ -152,14 +174,14 @@ curl -X POST -H 'Content-type: application/json' \
 }'
 ```
 
-### Configure CORS
+#### Configure CORS
 
 ```bash
 curl -X PUT -d 'https://erykkul.github.io' \
   "$SERVER_URL/api/admin/settings/:CorsAllowedOrigins"
 ```
 
-### Restart and Verify
+#### Restart and Verify
 
 ```bash
 # Restart Dataverse
@@ -173,7 +195,7 @@ curl "$SERVER_URL/api/datasets/export?exporter=cdi&persistentId=$DATASET_PID" \
   -o test-export.jsonld
 ```
 
-### Test with Example File
+#### Test with Example File
 
 ```bash
 # Download and upload an example
