@@ -179,7 +179,25 @@ async function renderWithShaclForm(jsonData) {
     if (!response.ok) {
         throw new Error(`Failed to load official SHACL shapes: ${response.statusText}`);
     }
-    const shapesData = await response.text();
+    let shapesData = await response.text();
+    
+    // Fix the SHACL target query to allow datasets with incoming schema:about references
+    // This is needed because subjectOf/about creates a circular reference
+    shapesData = shapesData.replace(
+        /SELECT DISTINCT \?this\s+WHERE \{\s+\?this a schema:Dataset \.\s+FILTER \(\s+NOT EXISTS \{ \?s \?p \?this \. \}\s+\)\s+\}/,
+        `SELECT DISTINCT ?this
+        WHERE {
+          ?this a schema:Dataset .
+          FILTER (
+            NOT EXISTS { 
+              ?s ?p ?this . 
+              FILTER(?p != schema:about)
+            }
+          )
+        }`
+    );
+    
+    console.log('[CDI Previewer] Modified SHACL shapes to allow schema:about incoming edges');
 
     // Wait for the shacl-form custom element to be defined
     await customElements.whenDefined('shacl-form');
@@ -199,9 +217,80 @@ async function renderWithShaclForm(jsonData) {
     
     // Don't set data-values-subject - let shacl-form auto-detect the root from SHACL shapes
     // The SHACL shapes define targets (e.g., schema:Dataset) that will be matched automatically
+    
+    console.log('[CDI Previewer] JSON-LD data loaded:', jsonData);
+    console.log('[CDI Previewer] Looking for schema:Dataset nodes...');
+    
+    // Debug: Find all Dataset nodes in the data
+    if (jsonData['@graph']) {
+        const datasets = jsonData['@graph'].filter(node => {
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            return types.some(t => t === 'schema:Dataset' || t === 'http://schema.org/Dataset');
+        });
+        console.log('[CDI Previewer] Found', datasets.length, 'Dataset node(s):', datasets.map(d => d['@id']));
+    }
+
+    // Listen for form rendering events
+    shaclFormElement.addEventListener('shacl-form-ready', () => {
+        console.log('[CDI Previewer] SHACL form is ready and rendered');
+    });
+    
+    shaclFormElement.addEventListener('shacl-validation-complete', (event) => {
+        console.log('[CDI Previewer] SHACL validation complete:', event.detail);
+        if (event.detail?.validationReport) {
+            displayValidationReport(event.detail.validationReport);
+        }
+    });
 
     // Create a container for the form
     const formContainer = $('<div/>').addClass('cdi-form-container');
     formContainer.append(shaclFormElement);
     $('.preview').append(formContainer);
+    
+    // Check after a delay if the form is empty
+    setTimeout(() => {
+        const formContent = $(shaclFormElement).find('shacl-property, .shacl-group').length;
+        if (formContent === 0) {
+            console.error('[CDI Previewer] Form appears empty - no properties rendered');
+            $('.preview').append(
+                $('<div/>').addClass('alert alert-warning').css('margin-top', '20px').html(
+                    '<strong>Warning:</strong> The SHACL form appears empty. This may indicate:<br>' +
+                    '<ul>' +
+                    '<li>No root <code>schema:Dataset</code> node was found in the data</li>' +
+                    '<li>The SHACL target query did not match any nodes</li>' +
+                    '<li>There is a structural issue with the CDI JSON-LD document</li>' +
+                    '</ul>' +
+                    'Check the browser console for detailed debugging information.'
+                )
+            );
+        }
+    }, 2000);
+}
+
+function displayValidationReport(report) {
+    if (!report || !report.violations || report.violations.length === 0) {
+        return; // No violations to display
+    }
+    
+    console.log('[CDI Previewer] Validation violations:', report.violations);
+    
+    const violationContainer = $('<div/>').addClass('alert alert-info').css('margin-top', '20px');
+    violationContainer.append('<strong>SHACL Validation Report:</strong>');
+    
+    const violationList = $('<ul/>');
+    report.violations.forEach((violation, index) => {
+        const item = $('<li/>');
+        item.append($('<strong/>').text(`Violation ${index + 1}: `));
+        item.append(violation.message || 'No message provided');
+        if (violation.focusNode) {
+            item.append($('<br/>')).append($('<em/>').text(`Focus node: ${violation.focusNode}`));
+        }
+        if (violation.path) {
+            item.append($('<br/>')).append($('<em/>').text(`Property path: ${violation.path}`));
+        }
+        violationList.append(item);
+    });
+    
+    violationContainer.append(violationList);
+    $('.preview').append(violationContainer);
 }
