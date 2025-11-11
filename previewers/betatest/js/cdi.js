@@ -231,18 +231,45 @@ async function renderWithShaclForm(jsonData) {
         }
     }
     
-    console.log('[CDI Previewer] JSON-LD data loaded:', jsonData);
+    console.log('[CDI Previewer] ===== DIAGNOSTIC INFO =====');
+    console.log('[CDI Previewer] JSON-LD data loaded. Keys:', Object.keys(jsonData));
+    console.log('[CDI Previewer] @context:', jsonData['@context']);
+    console.log('[CDI Previewer] @graph length:', jsonData['@graph']?.length);
     console.log('[CDI Previewer] Looking for schema:Dataset nodes...');
     
     // Debug: Find all Dataset nodes in the data
     if (jsonData['@graph']) {
+        const allTypes = new Set();
+        jsonData['@graph'].forEach(node => {
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            types.forEach(t => t && allTypes.add(t));
+        });
+        console.log('[CDI Previewer] All @type values in graph:', Array.from(allTypes));
+        
         const datasets = jsonData['@graph'].filter(node => {
             const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
             return types.some(t => t === 'schema:Dataset' || t === 'http://schema.org/Dataset');
         });
         console.log('[CDI Previewer] Found', datasets.length, 'Dataset node(s):', datasets.map(d => d['@id']));
+        
+        if (datasets.length > 0) {
+            console.log('[CDI Previewer] First Dataset node:', JSON.stringify(datasets[0], null, 2).substring(0, 500));
+        }
     }
+    
+    console.log('[CDI Previewer] data-shape-subject:', shaclFormElement.getAttribute('data-shape-subject'));
+    console.log('[CDI Previewer] data-values-subject:', shaclFormElement.getAttribute('data-values-subject'));
+    console.log('[CDI Previewer] Shapes data length:', shapesData.length, 'characters');
+    console.log('[CDI Previewer] Values data length:', valuesString.length, 'characters');
+    console.log('[CDI Previewer] ===== END DIAGNOSTIC INFO =====');
 
+    // Listen for ALL events from shacl-form for debugging
+    ['shacl-form-ready', 'shacl-validation-complete', 'error', 'load', 'change'].forEach(eventName => {
+        shaclFormElement.addEventListener(eventName, (event) => {
+            console.log(`[CDI Previewer] Event: ${eventName}`, event.detail || event);
+        });
+    });
+    
     // Listen for form rendering events
     shaclFormElement.addEventListener('shacl-form-ready', () => {
         console.log('[CDI Previewer] SHACL form is ready and rendered');
@@ -253,6 +280,15 @@ async function renderWithShaclForm(jsonData) {
         if (event.detail?.validationReport) {
             displayValidationReport(event.detail.validationReport);
         }
+    });
+    
+    // Add comprehensive error logging
+    window.addEventListener('error', (event) => {
+        console.error('[CDI Previewer] Global error:', event.error);
+    });
+    
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('[CDI Previewer] Unhandled promise rejection:', event.reason);
     });
 
     // Create a container for the form
