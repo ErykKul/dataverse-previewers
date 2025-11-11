@@ -94,7 +94,7 @@ curl -X POST -H 'Content-type: application/json' \
         {"locale":"{localeCode}"}
       ]
     },
-  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\"",
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0\"",
   "allowedApiCalls": [
     {
       "name": "retrieveFileContents",
@@ -147,7 +147,7 @@ curl -X POST -H 'Content-type: application/json' \
         {"locale":"{localeCode}"}
       ]
     },
-  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""
+  "contentType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0\""
 }'
 ```
 
@@ -203,7 +203,7 @@ curl -O https://erykkul.github.io/dataverse-previewers/examples/cdi/SimpleSample
 
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
   -F 'file=@SimpleSample.jsonld' \
-  -F 'jsonData={"description":"CDI Sample Metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
+  -F 'jsonData={"description":"CDI Sample Metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0\""}' \
   "$SERVER_URL/api/datasets/:persistentId/add?persistentId=$DATASET_PID"
 ```
 
@@ -216,13 +216,19 @@ Go to your dataset page and click the preview icon on the uploaded file.
 DDI-CDI files require a specific MIME type to distinguish them from generic JSON-LD:
 
 ```
-application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"
+application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"
 ```
 
 **Profile components:**
 - `flattened` - Uses `@graph` structure
 - `compacted` - Compact IRI representation  
 - DDI-CDI specification URI - Version 1.0
+
+**IMPORTANT - URL Case Sensitivity:**
+- The profile URL must use **lowercase** `specification/ddi-cdi` (not `Specification/DDI-CDI`)
+- Dataverse performs **case-sensitive** MIME type matching
+- Both URLs redirect to the same specification, but only lowercase matches correctly
+- Using uppercase will prevent the previewer from appearing
 
 This profile parameter is **required** when uploading CDI files so Dataverse can identify them correctly.
 
@@ -297,7 +303,7 @@ curl -O https://erykkul.github.io/dataverse-previewers/examples/cdi/[filename].j
 ```bash
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
   -F 'file=@SimpleSample.jsonld' \
-  -F 'jsonData={"description":"CDI metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
+  -F 'jsonData={"description":"CDI metadata","categories":["Data"],"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0\""}' \
   "$SERVER_URL/api/datasets/:persistentId/add?persistentId=$DATASET_PID"
 ```
 
@@ -362,7 +368,7 @@ curl "$SERVER_URL/api/files/$FILE_ID/metadata"
 
 # Update
 curl -H "X-Dataverse-key:$API_TOKEN" -X POST \
-  -F 'jsonData={"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0\""}' \
+  -F 'jsonData={"mimeType":"application/ld+json; profile=\"http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0\""}' \
   "$SERVER_URL/api/files/$FILE_ID/metadata"
 ```
 

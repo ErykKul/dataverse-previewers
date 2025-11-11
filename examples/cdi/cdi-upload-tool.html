@@ -59,7 +59,7 @@
         <h4><span class="glyphicon glyphicon-warning-sign"></span> Testing Tool Only</h4>
         <p><strong>Important:</strong> This is a simplified tool for testing the CDI previewer. It uploads example CDI files to your dataset.</p>
         <p>For production use, you should create a proper external tool or use the standard Dataverse file upload interface.</p>
-        <p><strong>MIME Type:</strong> Files will be uploaded as <code>application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"</code></p>
+        <p><strong>MIME Type:</strong> Files will be uploaded as <code>application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"</code></p>
     </div>
 
     <div class="panel panel-default">
@@ -228,7 +228,7 @@
             const formData = new FormData();
             
             // Create a new Blob with the correct CDI MIME type (must match previewer registration exactly)
-            const cdiMimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"';
+            const cdiMimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
             const cdiBlob = new Blob([fileBlob], { type: cdiMimeType });
             formData.append('file', cdiBlob, filename);
             
