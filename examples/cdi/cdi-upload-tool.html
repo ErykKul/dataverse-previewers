@@ -226,13 +226,16 @@
 
         async function uploadFile(filename, fileBlob) {
             const formData = new FormData();
-            formData.append('file', fileBlob, filename);
             
-            // Add JSON metadata for the file with proper DDI-CDI MIME type
+            // Create a new Blob with the correct CDI MIME type
+            const cdiMimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"';
+            const cdiBlob = new Blob([fileBlob], { type: cdiMimeType });
+            formData.append('file', cdiBlob, filename);
+            
+            // Add JSON metadata for the file
             const jsonData = {
                 description: 'CDI example metadata file',
                 categories: ['Data'],
-                contentType: 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"',
                 restrict: false,
                 directoryLabel: 'cdi-examples'
             };
