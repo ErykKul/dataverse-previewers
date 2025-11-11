@@ -84,7 +84,7 @@ The Spreadsheet Previewer was contributed by [anncie-pcss](https://github.com/an
 
 [Max Planck Digital Library](https://github.com/MPDL) contributed the ZIP Previewer.
 
-[erykkul](https://github.com/erykkul) contributed the Markdown (MD) Previewer and the RO-Crate previewer.
+[erykkul](https://github.com/erykkul) contributed the Markdown (MD) Previewer, the RO-Crate previewer, and the CDI (DDI Cross-Domain Integration) previewer. The CDI previewer uses [SHACL shapes](https://www.w3.org/TR/shacl/) from the [Cross-Domain Interoperability Framework](https://github.com/Cross-Domain-Interoperability-Framework/validation) and the [shacl-form](https://github.com/ULB-Darmstadt/shacl-form) library to render DDI-CDI metadata according to official standards.
 
 [Jan Range](https://github.com/JR-1991) contributed the H5Web Previewer, Rich Html Previewer.
 
