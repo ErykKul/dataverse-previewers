@@ -208,6 +208,22 @@ async function renderWithShaclForm(jsonData) {
     // Convert JSON-LD to a string
     const valuesString = JSON.stringify(jsonData, null, 2);
     
+    // FIX: Replace unreachable @context URL with inline context
+    // The original Bitbucket URL causes CORS errors
+    if (jsonData['@context'] && typeof jsonData['@context'] === 'string') {
+        if (jsonData['@context'].includes('bitbucket.io')) {
+            console.log('[CDI Previewer] Replacing unreachable @context URL with inline context');
+            // Use a minimal inline context to make the data parseable
+            jsonData['@context'] = {
+                "@vocab": "https://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
+                "schema": "http://schema.org/",
+                "name": "schema:name",
+                "description": "schema:description"
+            };
+            valuesString = JSON.stringify(jsonData);
+        }
+    }
+    
     // Set attributes on the shacl-form element (start in view mode)
     shaclFormElement.setAttribute('data-shapes', shapesData);
     shaclFormElement.setAttribute('data-values', valuesString);
@@ -219,11 +235,24 @@ async function renderWithShaclForm(jsonData) {
     shaclFormElement.setAttribute('data-shape-subject', 'https://cdif.org/validation/0.1/shacl#CDIFDatasetRecommendedShape');
     
     // Try to detect the root dataset subject from the data
+    // CDI data uses DDI-CDI types like WideDataSet, not schema:Dataset
     if (jsonData['@graph']) {
-        const datasets = jsonData['@graph'].filter(node => {
+        // First try to find schema:Dataset nodes
+        let datasets = jsonData['@graph'].filter(node => {
             const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
             return types && types.some(t => t === 'schema:Dataset' || t === 'http://schema.org/Dataset');
         });
+        
+        // If no schema:Dataset, look for DDI-CDI dataset types (WideDataSet, LongDataSet, etc.)
+        if (datasets.length === 0) {
+            datasets = jsonData['@graph'].filter(node => {
+                const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+                return types && types.some(t => 
+                    t.includes('DataSet') || t.includes('Dataset') || 
+                    t === 'WideDataSet' || t === 'LongDataSet' || t === 'DimensionalDataSet'
+                );
+            });
+        }
         
         if (datasets.length > 0 && datasets[0]['@id']) {
             console.log('[CDI Previewer] Setting data-values-subject to:', datasets[0]['@id']);
@@ -235,7 +264,7 @@ async function renderWithShaclForm(jsonData) {
     console.log('[CDI Previewer] JSON-LD data loaded. Keys:', Object.keys(jsonData));
     console.log('[CDI Previewer] @context:', jsonData['@context']);
     console.log('[CDI Previewer] @graph length:', jsonData['@graph']?.length);
-    console.log('[CDI Previewer] Looking for schema:Dataset nodes...');
+    console.log('[CDI Previewer] Looking for dataset nodes...');
     
     // Debug: Find all Dataset nodes in the data
     if (jsonData['@graph']) {
@@ -246,14 +275,26 @@ async function renderWithShaclForm(jsonData) {
         });
         console.log('[CDI Previewer] All @type values in graph:', Array.from(allTypes));
         
-        const datasets = jsonData['@graph'].filter(node => {
+        // Look for both schema:Dataset and DDI-CDI dataset types
+        const schemaDatasets = jsonData['@graph'].filter(node => {
             const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
             return types.some(t => t === 'schema:Dataset' || t === 'http://schema.org/Dataset');
         });
-        console.log('[CDI Previewer] Found', datasets.length, 'Dataset node(s):', datasets.map(d => d['@id']));
         
-        if (datasets.length > 0) {
-            console.log('[CDI Previewer] First Dataset node:', JSON.stringify(datasets[0], null, 2).substring(0, 500));
+        const cdiDatasets = jsonData['@graph'].filter(node => {
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            return types.some(t => 
+                t.includes('DataSet') || t.includes('Dataset') || 
+                t === 'WideDataSet' || t === 'LongDataSet' || t === 'DimensionalDataSet'
+            );
+        });
+        
+        console.log('[CDI Previewer] Found', schemaDatasets.length, 'schema:Dataset node(s)');
+        console.log('[CDI Previewer] Found', cdiDatasets.length, 'DDI-CDI dataset node(s):', cdiDatasets.map(d => ({id: d['@id'], type: d['@type']})));
+        
+        const selectedDataset = schemaDatasets[0] || cdiDatasets[0];
+        if (selectedDataset) {
+            console.log('[CDI Previewer] Selected dataset node:', JSON.stringify(selectedDataset, null, 2).substring(0, 500));
         }
     }
     
