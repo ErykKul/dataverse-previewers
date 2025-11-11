@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDI Test File Uploader</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        body {
+            padding: 20px;
+        }
+        .info-box {
+            background-color: #fcf8e3;
+            border: 1px solid #faebcc;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #8a6d3b;
+        }
+        .file-choice {
+            margin: 15px 0;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .file-choice input[type="radio"] {
+            margin-right: 10px;
+        }
+        .file-description {
+            margin-left: 25px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            color: #3c763d;
+        }
+        .error {
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body class="container">
+    <h1>CDI Test File Uploader</h1>
+    
+    <div class="info-box">
+        <h4><span class="glyphicon glyphicon-warning-sign"></span> Testing Tool Only</h4>
+        <p><strong>Important:</strong> This is a simplified tool for testing the CDI previewer. It uploads example CDI files to your dataset.</p>
+        <p>For production use, you should create a proper external tool or use the standard Dataverse file upload interface.</p>
+        <p><strong>MIME Type:</strong> Files will be uploaded as <code>application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"</code></p>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Dataset Information</h3>
+        </div>
+        <div class="panel-body">
+            <div id="dataset-info">
+                <p><strong>Dataset ID:</strong> <span id="dataset-id"></span></p>
+                <p><strong>Dataset Version:</strong> <span id="dataset-version"></span></p>
+                <p><strong>Site URL:</strong> <span id="site-url"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <h3 class="panel-title">Select Example CDI File</h3>
+        </div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label for="api-token">API Token (required):</label>
+                <input type="password" class="form-control" id="api-token" placeholder="Enter your Dataverse API token">
+                <p class="help-block">Your API token is required to upload files. Get it from your Dataverse account settings.</p>
+            </div>
+
+            <div class="form-group">
+                <label>Choose an example CDI file to upload:</label>
+                
+                <div class="file-choice">
+                    <label>
+                        <input type="radio" name="example-file" value="SimpleSample.jsonld">
+                        <strong>SimpleSample.jsonld</strong>
+                    </label>
+                    <div class="file-description">
+                        Basic sample dataset with variables (Sample ID, Mass, Volume, Measurement Date). 
+                        Good for initial testing of the previewer.
+                    </div>
+                </div>
+
+                <div class="file-choice">
+                    <label>
+                        <input type="radio" name="example-file" value="SimpleSample2.jsonld">
+                        <strong>SimpleSample2.jsonld</strong>
+                    </label>
+                    <div class="file-description">
+                        Sample with status codes and categorical data. 
+                        Tests more complex SHACL form rendering.
+                    </div>
+                </div>
+
+                <div class="file-choice">
+                    <label>
+                        <input type="radio" name="example-file" value="se_na2so4-XDI-CDI-CDIF.jsonld">
+                        <strong>se_na2so4-XDI-CDI-CDIF.jsonld</strong>
+                    </label>
+                    <div class="file-description">
+                        X-ray absorption spectroscopy (XAS) data from scientific research. 
+                        Complex structure with multiple components.
+                    </div>
+                </div>
+
+                <div class="file-choice">
+                    <label>
+                        <input type="radio" name="example-file" value="FeXAS_Fe_c3d.001-NEXUS-HDF5-cdi-CDIF.jsonld">
+                        <strong>FeXAS_Fe_c3d.001-NEXUS-HDF5-cdi-CDIF.jsonld</strong>
+                    </label>
+                    <div class="file-description">
+                        Iron X-ray absorption spectroscopy data in NEXUS/HDF5 format. 
+                        Advanced scientific dataset demonstrating CDI integration.
+                    </div>
+                </div>
+
+                <div class="file-choice">
+                    <label>
+                        <input type="radio" name="example-file" value="ESS11-subset_DDICDI.jsonld">
+                        <strong>ESS11-subset_DDICDI.jsonld</strong>
+                    </label>
+                    <div class="file-description">
+                        European Social Survey (ESS) subset. 
+                        Social science survey data demonstrating DDI-CDI for survey research.
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-success btn-lg" id="upload-btn">
+                <span class="glyphicon glyphicon-upload"></span> Upload Selected File to Dataset
+            </button>
+
+            <div class="status-message" id="status-message"></div>
+        </div>
+    </div>
+
+    <script>
+        let datasetId = null;
+        let datasetVersion = null;
+        let siteUrl = null;
+
+        // Parse URL parameters
+        $(document).ready(function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            datasetId = urlParams.get('datasetid');
+            datasetVersion = urlParams.get('datasetversion');
+            siteUrl = urlParams.get('siteUrl');
+
+            if (datasetId) $('#dataset-id').text(datasetId);
+            if (datasetVersion) $('#dataset-version').text(datasetVersion);
+            if (siteUrl) $('#site-url').text(siteUrl);
+        });
+
+        function showStatus(message, isError = false) {
+            const statusDiv = $('#status-message');
+            statusDiv.removeClass('success error');
+            statusDiv.addClass(isError ? 'error' : 'success');
+            statusDiv.html(message);
+            statusDiv.show();
+        }
+
+        $('#upload-btn').on('click', async function() {
+            const apiToken = $('#api-token').val().trim();
+            const selectedFile = $('input[name="example-file"]:checked').val();
+            
+            if (!apiToken) {
+                showStatus('Please enter your API token', true);
+                return;
+            }
+
+            if (!selectedFile) {
+                showStatus('Please select a CDI file to upload', true);
+                return;
+            }
+
+            if (!datasetId || !siteUrl) {
+                showStatus('Missing dataset information. Please access this tool from Dataverse.', true);
+                return;
+            }
+
+            $(this).prop('disabled', true);
+            showStatus(`Downloading and uploading ${selectedFile}...`, false);
+
+            try {
+                // Fetch the example file from GitHub Pages
+                const fileUrl = `https://erykkul.github.io/dataverse-previewers/examples/cdi/${selectedFile}`;
+                const fileResponse = await fetch(fileUrl);
+                
+                if (!fileResponse.ok) {
+                    throw new Error(`Failed to download ${selectedFile}`);
+                }
+                
+                const fileContent = await fileResponse.blob();
+                
+                // Upload to Dataverse
+                await uploadFile(selectedFile, fileContent, apiToken);
+                
+                showStatus(`Successfully uploaded ${selectedFile}!`, false);
+                
+                // Redirect back to dataset after 2 seconds
+                setTimeout(() => {
+                    window.location.href = `${siteUrl}/dataset.xhtml?persistentId=${datasetId}&version=${datasetVersion}`;
+                }, 2000);
+                
+            } catch (error) {
+                showStatus(`Upload failed: ${error.message}`, true);
+                $(this).prop('disabled', false);
+            }
+        });
+
+        async function uploadFile(filename, fileBlob, apiToken) {
+            const formData = new FormData();
+            formData.append('file', fileBlob, filename);
+            
+            // Add JSON metadata for the file with proper DDI-CDI MIME type
+            const jsonData = {
+                description: 'CDI example metadata file',
+                categories: ['Data'],
+                mimeType: 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/Specification/DDI-CDI/1.0"',
+                restrict: false,
+                directoryLabel: 'cdi-examples'
+            };
+            formData.append('jsonData', JSON.stringify(jsonData));
+
+            const response = await fetch(
+                `${siteUrl}/api/datasets/:persistentId/add?persistentId=${datasetId}`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'X-Dataverse-key': apiToken
+                    },
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        }
+    </script>
+</body>
+</html>
