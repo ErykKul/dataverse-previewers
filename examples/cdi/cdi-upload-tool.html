@@ -152,60 +152,20 @@
         let datasetVersion = null;
         let siteUrl = null;
         let apiToken = null;
-        let uploadUrl = null;
 
         // Parse URL parameters
         $(document).ready(function() {
             const urlParams = new URLSearchParams(window.location.search);
             
-            // Check if using callback (signed URLs)
-            if (urlParams.has('callback')) {
-                const callback = atob(urlParams.get('callback'));
-                
-                // Fetch the callback URL to get parameters and signed URLs
-                $.ajax({
-                    dataType: "json",
-                    url: callback,
-                    success: function(json) {
-                        const params = json.data.queryParameters;
-                        datasetId = params.datasetid;
-                        datasetVersion = params.datasetversion;
-                        siteUrl = params.siteUrl;
-                        
-                        // Get the signed URL for upload
-                        const signedUrls = json.data.signedUrls;
-                        for (let i in signedUrls) {
-                            if (signedUrls[i].name === 'addFileToDataset') {
-                                uploadUrl = signedUrls[i].signedUrl;
-                                console.log('Got signed URL:', uploadUrl);
-                                break;
-                            }
-                        }
-                        
-                        if (!uploadUrl) {
-                            console.error('No signed URL found. Available URLs:', signedUrls);
-                        }
-                        
-                        // Update display
-                        if (datasetId) $('#dataset-id').text(datasetId);
-                        if (datasetVersion) $('#dataset-version').text(datasetVersion);
-                        if (siteUrl) $('#site-url').text(siteUrl);
-                    },
-                    error: function(jqXHR, textStatus, errorThrown) {
-                        showStatus('Failed to load tool parameters: ' + textStatus, true);
-                    }
-                });
-            } else {
-                // Legacy mode: parameters passed directly
-                datasetId = urlParams.get('datasetid');
-                datasetVersion = urlParams.get('datasetversion');
-                siteUrl = urlParams.get('siteUrl');
-                apiToken = urlParams.get('key');
+            // Using direct parameters (API token mode)
+            datasetId = urlParams.get('datasetid');
+            datasetVersion = urlParams.get('datasetversion');
+            siteUrl = urlParams.get('siteUrl');
+            apiToken = urlParams.get('key');
 
-                if (datasetId) $('#dataset-id').text(datasetId);
-                if (datasetVersion) $('#dataset-version').text(datasetVersion);
-                if (siteUrl) $('#site-url').text(siteUrl);
-            }
+            if (datasetId) $('#dataset-id').text(datasetId);
+            if (datasetVersion) $('#dataset-version').text(datasetVersion);
+            if (siteUrl) $('#site-url').text(siteUrl);
         });
 
         function showStatus(message, isError = false) {
@@ -229,8 +189,8 @@
                 return;
             }
 
-            if (!uploadUrl && !apiToken) {
-                showStatus('Missing authentication. Please access this tool from Dataverse.', true);
+            if (!apiToken) {
+                showStatus('Missing API token. Please access this tool from Dataverse.', true);
                 return;
             }
 
@@ -278,17 +238,9 @@
             };
             formData.append('jsonData', JSON.stringify(jsonData));
 
-            // Use signed URL if available, otherwise construct URL with API token
-            let url, headers;
-            if (uploadUrl) {
-                // Using signed URL (recommended)
-                url = uploadUrl;
-                headers = {};
-            } else {
-                // Using API token (legacy)
-                url = `${siteUrl}/api/datasets/:persistentId/add?persistentId=${datasetId}`;
-                headers = { 'X-Dataverse-key': apiToken };
-            }
+            // Use API token to upload
+            const url = `${siteUrl}/api/datasets/:persistentId/add?persistentId=${datasetId}`;
+            const headers = { 'X-Dataverse-key': apiToken };
 
             const response = await fetch(url, {
                 method: 'POST',
