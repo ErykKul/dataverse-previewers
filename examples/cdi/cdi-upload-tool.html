@@ -177,8 +177,13 @@
                         for (let i in signedUrls) {
                             if (signedUrls[i].name === 'addFileToDataset') {
                                 uploadUrl = signedUrls[i].signedUrl;
+                                console.log('Got signed URL:', uploadUrl);
                                 break;
                             }
+                        }
+                        
+                        if (!uploadUrl) {
+                            console.error('No signed URL found. Available URLs:', signedUrls);
                         }
                         
                         // Update display
@@ -292,8 +297,18 @@
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+                let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                    console.error('Upload error details:', errorData);
+                } catch (e) {
+                    // Response wasn't JSON
+                    const errorText = await response.text();
+                    console.error('Upload error text:', errorText);
+                    if (errorText) errorMessage = errorText;
+                }
+                throw new Error(errorMessage);
             }
 
             return await response.json();
