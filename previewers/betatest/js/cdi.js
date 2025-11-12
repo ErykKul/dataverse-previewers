@@ -212,8 +212,10 @@ async function renderWithShaclForm(jsonData, fileUrl) {
     // The original Bitbucket URL causes CORS errors
     // Create comprehensive inline context to replace unreachable Bitbucket URL
     // CRITICAL: Add @base to resolve fragment identifiers like #Sample_Dataset
+    // Use a clean base URL without query parameters (they cause issues in JSON-LD parsers)
+    const cleanBaseUrl = fileUrl ? fileUrl.split('?')[0] : "http://example.org/cdi-data";
     const inlineContext = {
-        "@base": fileUrl || "http://example.org/cdi-data",  // Base URL for resolving # fragments
+        "@base": cleanBaseUrl,  // Base URL for resolving # fragments
         "@vocab": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
         "schema": "http://schema.org/",
         "dcterms": "http://purl.org/dc/terms/",
@@ -292,10 +294,10 @@ async function renderWithShaclForm(jsonData, fileUrl) {
             console.log('[CDI Previewer] Dataset node full object:', datasets[0]);
             
             // CRITICAL: Fragment identifiers (#foo) need to be resolved to absolute URIs
-            // If @id starts with #, resolve it against the base URL
+            // If @id starts with #, resolve it against the base URL (without query params)
             let resolvedId = datasetId;
             if (datasetId.startsWith('#')) {
-                const baseUrl = fileUrl || "http://example.org/cdi-data";
+                const baseUrl = fileUrl ? fileUrl.split('?')[0] : "http://example.org/cdi-data";
                 resolvedId = baseUrl + datasetId;
                 console.log('[CDI Previewer] Resolved fragment identifier', datasetId, 'to absolute URI:', resolvedId);
             }
