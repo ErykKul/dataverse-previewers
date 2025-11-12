@@ -613,9 +613,35 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 let fileUrl;
                 
-                // Get parameters from Dataverse
-                fileId = urlParams.get('fileid');
-                siteUrl = urlParams.get('siteUrl');
+                // Check if we have a callback parameter (external tool invocation)
+                const callbackParam = urlParams.get('callback');
+                if (callbackParam) {
+                    // Decode the callback URL
+                    const callbackUrl = atob(callbackParam);
+                    
+                    // Fetch the tool parameters from the callback URL
+                    const paramsResponse = await fetch(callbackUrl);
+                    if (!paramsResponse.ok) {
+                        throw new Error(`Failed to fetch tool parameters: ${paramsResponse.status}`);
+                    }
+                    const paramsData = await paramsResponse.json();
+                    
+                    // Extract parameters from the response
+                    const queryParams = paramsData.data.queryParameters || [];
+                    queryParams.forEach(param => {
+                        if (param.fileid) fileId = param.fileid;
+                        if (param.siteUrl) siteUrl = param.siteUrl;
+                    });
+                } else {
+                    // Direct parameters (for testing)
+                    fileId = urlParams.get('fileid');
+                    siteUrl = urlParams.get('siteUrl');
+                }
+                
+                // Check required parameters
+                if (!fileId || !siteUrl) {
+                    throw new Error('Missing required parameters: fileid and siteUrl must be provided');
+                }
                 
                 // Load from Dataverse API
                 fileUrl = siteUrl + '/api/access/datafile/' + fileId;
