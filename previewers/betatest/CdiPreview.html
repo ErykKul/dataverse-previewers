@@ -2073,7 +2073,8 @@
                 formData.append('jsonData', JSON.stringify({
                     description: 'Updated CDI metadata',
                     categories: ['Data'],
-                    forceReplace: true
+                    forceReplace: true,
+                    mimeType: mimeType
                 }));
                 
                 // Show saving indicator
@@ -2328,7 +2329,9 @@
             collectChangesFromDOM();
             
             const dataStr = JSON.stringify(jsonData, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/ld+json' });
+            // Use the correct MIME type with DDI-CDI profile
+            const mimeType = 'application/ld+json; profile="http://ddialliance.org/Specification/DDI-CDI/1.0/DDI-CDI.jsonld"';
+            const blob = new Blob([dataStr], { type: mimeType });
             const url = URL.createObjectURL(blob);
             
             const a = document.createElement('a');
