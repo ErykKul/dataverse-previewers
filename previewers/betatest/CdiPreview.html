@@ -613,21 +613,12 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 let fileUrl;
                 
-                // Store for saving later
+                // Get parameters from Dataverse
                 fileId = urlParams.get('fileid');
                 siteUrl = urlParams.get('siteUrl');
-                const testFile = urlParams.get('testfile');
                 
-                if (fileId && siteUrl) {
-                    // Production mode: load from Dataverse API
-                    fileUrl = siteUrl + '/api/access/datafile/' + fileId;
-                } else if (testFile) {
-                    // Test mode with specific file
-                    fileUrl = '../../examples/cdi/' + testFile;
-                } else {
-                    // Default test file
-                    fileUrl = '../../examples/cdi/SimpleSample.jsonld';
-                }
+                // Load from Dataverse API
+                fileUrl = siteUrl + '/api/access/datafile/' + fileId;
                 
                 // Load JSON-LD data
                 const response = await fetch(fileUrl);
@@ -1852,11 +1843,6 @@
                 }
             });
             
-            // Clean up test mode alert when modal closes
-            $('#saveModal').on('hidden.bs.modal', function() {
-                $('.test-mode-alert').remove();
-            });
-            
             // Validate
             $('#validate-btn').click(function() {
                 validateData();
@@ -2033,40 +2019,13 @@
             // First, collect any changes from the DOM
             collectChangesFromDOM();
             
-            // Check if we're in production or test mode
-            if (fileId && siteUrl) {
-                // Production mode - show full modal with API token input
-                $('#apiTokenInput').val('');
-                $('.modal-body .alert-info').show();
-                $('.modal-body ul').show();
-                $('.modal-body .form-group').show();
-                $('#confirmSaveBtn').show();
-                $('#saveModal .modal-title').html('<span class="glyphicon glyphicon-floppy-disk"></span> Save Changes to Dataverse');
-            } else {
-                // Test mode - show simplified modal
-                $('.modal-body .alert-info').hide();
-                $('.modal-body ul').hide();
-                $('.modal-body .form-group').hide();
-                $('#confirmSaveBtn').hide();
-                $('#saveModal .modal-title').html('<span class="glyphicon glyphicon-info-sign"></span> Test Mode');
-                $('.modal-body').prepend('<div class="alert alert-warning test-mode-alert"><strong>Test Mode:</strong> You are viewing this file locally. Changes are saved in memory only. Click "Export JSON-LD" to download the updated file.</div>');
-            }
-            
+            // Clear API token input and show modal
+            $('#apiTokenInput').val('');
             $('#saveModal').modal('show');
         }
         
         async function saveToDataverse() {
             const apiToken = $('#apiTokenInput').val().trim();
-            
-            // Check if we're in production mode (have fileId and siteUrl)
-            if (!fileId || !siteUrl) {
-                // Test mode - just download the file
-                $('#saveModal').modal('hide');
-                alert('Test mode: Changes collected. Click "Export JSON-LD" to download the updated file.');
-                $('.property-row').removeClass('changed');
-                updateSaveButton();
-                return;
-            }
             
             if (!apiToken) {
                 alert('Please enter your API token.');
