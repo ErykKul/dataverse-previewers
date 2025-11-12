@@ -160,7 +160,7 @@ async function writeContentAndData(data, fileUrl, file, title, authors) {
         $('.preview').append(info);
 
         // Use shacl-form with official SHACL shapes
-        await renderWithShaclForm(jsonData);
+        await renderWithShaclForm(jsonData, fileUrl);
         
     } catch (error) {
         console.error('Error rendering CDI preview:', error);
@@ -172,7 +172,7 @@ async function writeContentAndData(data, fileUrl, file, title, authors) {
     }
 }
 
-async function renderWithShaclForm(jsonData) {
+async function renderWithShaclForm(jsonData, fileUrl) {
     // Load the official SHACL shapes
     const shapesUrl = 'shapes/CDIF-Discovery-Core-Shapes.ttl';
     const response = await fetch(shapesUrl);
