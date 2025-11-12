@@ -210,7 +210,10 @@ async function renderWithShaclForm(jsonData) {
     
     // FIX: Replace unreachable @context URL with inline context
     // The original Bitbucket URL causes CORS errors
+    // Create comprehensive inline context to replace unreachable Bitbucket URL
+    // CRITICAL: Add @base to resolve fragment identifiers like #Sample_Dataset
     const inlineContext = {
+        "@base": fileUrl || "http://example.org/cdi-data",  // Base URL for resolving # fragments
         "@vocab": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
         "schema": "http://schema.org/",
         "dcterms": "http://purl.org/dc/terms/",
@@ -284,8 +287,23 @@ async function renderWithShaclForm(jsonData) {
         }
         
         if (datasets.length > 0 && datasets[0]['@id']) {
-            console.log('[CDI Previewer] Setting data-values-subject to:', datasets[0]['@id']);
-            shaclFormElement.setAttribute('data-values-subject', datasets[0]['@id']);
+            const datasetId = datasets[0]['@id'];
+            console.log('[CDI Previewer] Found dataset with @id:', datasetId);
+            console.log('[CDI Previewer] Dataset node full object:', datasets[0]);
+            
+            // CRITICAL: Fragment identifiers (#foo) need to be resolved to absolute URIs
+            // If @id starts with #, resolve it against the base URL
+            let resolvedId = datasetId;
+            if (datasetId.startsWith('#')) {
+                const baseUrl = fileUrl || "http://example.org/cdi-data";
+                resolvedId = baseUrl + datasetId;
+                console.log('[CDI Previewer] Resolved fragment identifier', datasetId, 'to absolute URI:', resolvedId);
+            }
+            
+            console.log('[CDI Previewer] Setting data-values-subject to:', resolvedId);
+            shaclFormElement.setAttribute('data-values-subject', resolvedId);
+        } else {
+            console.error('[CDI Previewer] NO DATASET FOUND! Cannot set data-values-subject');
         }
     }
     
