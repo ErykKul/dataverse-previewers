@@ -1,87 +1,2219 @@
+<!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
-    <title class="cdiPreviewText">CDI Preview</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script type="text/javascript" src="js/xss.js"></script>
-    <script type="module" src="js/shacl-form.js"></script>
-    <script src="lib/jquery.i18n.js"></script>
-    <script src="lib/jquery.i18n.messagestore.js"></script>
-    <script src="lib/jquery.i18n.language.js"></script>
-    <script type="text/javascript" src="js/retriever.js"></script>
-    <script type="text/javascript" src="js/cdi.js"></script>
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
-        integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap-theme.min.css"
-        integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
-    <link type="text/css" rel="stylesheet" href="css/preview.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDI Data Viewer & Editor</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
     <style>
-        .cdi-form-container {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         
-        .preview-info {
+        .preview-header {
+            background: #f8f9fa;
             padding: 15px;
-            background-color: #d9edf7;
-            border: 1px solid #bce8f1;
             border-radius: 4px;
             margin-bottom: 20px;
-            color: #31708f;
+            border-left: 4px solid #007bff;
         }
         
-        .preview-info p {
-            margin: 5px 0;
+        .node-card {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            background: white;
+            position: relative;
         }
         
-        .preview-info strong {
-            font-size: 1.2em;
+        .node-card.tree-node {
+            margin-bottom: 8px;
         }
         
-        shacl-form {
-            display: block;
+        .node-card.tree-node::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            top: 0;
+            bottom: 50%;
+            width: 10px;
+            border-left: 1px solid #ccc;
+            border-bottom: 1px solid #ccc;
+            border-bottom-left-radius: 6px;
+        }
+        
+        .node-card.tree-node:last-child::before {
+            border-left: none;
+        }
+        
+        .node-card.highlight {
+            animation: highlight-pulse 2s ease-out;
+        }
+        
+        @keyframes highlight-pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+                background-color: #fff3cd;
+            }
+            50% {
+                box-shadow: 0 0 20px 10px rgba(255, 193, 7, 0.3);
+                background-color: #fff3cd;
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+                background-color: white;
+            }
+        }
+        
+        .node-reference-link {
+            border-left: 2px dashed #6c757d;
+            padding-left: 10px;
+        }
+        
+        .node-header {
+            background: #e9ecef;
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .node-header:hover {
+            background: #dee2e6;
+        }
+        
+        .node-header .collapse-icon {
+            transition: transform 0.2s;
+        }
+        
+        .node-card.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .node-card.collapsed .node-body {
+            display: none;
+        }
+        
+        .node-card.collapsed .add-property-section {
+            display: none;
+        }
+        
+        .node-card.hidden-by-search {
+            display: none;
+        }
+        
+        .search-highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        
+        .node-id {
+            font-family: monospace;
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .node-type {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        
+        .node-body {
+            padding: 15px;
+        }
+        
+        .property-row {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-left: 3px solid #28a745;
+            background: #f8f9fa;
+            position: relative;
+        }
+        
+        .property-row.shacl-defined {
+            border-left-color: #007bff;
+            background: #f0f7ff;
+        }
+        
+        .property-row.extra-field {
+            border-left-color: #ffc107;
+            background: #fff9e6;
+        }
+        
+        .property-row.required {
+            border-left-width: 5px;
+        }
+        
+        .property-row.invalid {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+        
+        .property-row.changed {
+            border-left-color: #17a2b8;
+            background: #e7f6f8;
+        }
+        
+        .property-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .property-badge.required {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .property-badge.optional {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .property-badge.extra {
+            background: #ffc107;
+            color: #000;
+        }
+        
+        .property-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 5px;
+        }
+        
+        .property-path {
+            font-family: monospace;
+            font-size: 0.85em;
+            color: #6c757d;
+        }
+        
+        .property-value {
+            margin-top: 5px;
+        }
+        
+        .property-value input,
+        .property-value textarea,
+        .property-value select {
             width: 100%;
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .property-value input[type="number"] {
+            width: 200px;
+        }
+        
+        .property-value input[type="date"],
+        .property-value input[type="datetime-local"] {
+            width: 250px;
+        }
+        
+        .property-value input[type="url"],
+        .property-value input[type="email"] {
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .property-value textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        
+        .view-mode .property-value input,
+        .view-mode .property-value textarea,
+        .view-mode .property-value select {
+            background: #e9ecef;
+            border-color: #dee2e6;
+            cursor: not-allowed;
+        }
+        
+        .value-display {
+            padding: 8px;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        
+        /* Hide extra properties when filter is active */
+        body.filter-shacl-only .property-row.extra-field {
+            display: none !important;
+        }
+        
+        /* Hide nodes with no SHACL properties when filter is active */
+        .node-card.hidden-by-filter {
+            display: none !important;
+        }
+        
+        .toolbar {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 15px;
+            border-bottom: 2px solid #dee2e6;
+            margin: -20px -20px 20px -20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            margin-right: 10px;
+        }
+        
+        .btn.active {
+            background-color: #337ab7;
+            color: white;
+            border-color: #2e6da4;
+        }
+        
+        .validation-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+        
+        .validation-badge.valid {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .validation-badge.invalid {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .validation-message {
+            margin-top: 5px;
+            padding: 8px;
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            font-size: 0.9em;
+        }
+        
+        .array-value {
+            margin-bottom: 5px;
+        }
+        
+        .add-value-btn {
+            margin-top: 5px;
+        }
+        
+        .delete-btn {
+            color: #dc3545;
+            cursor: pointer;
+            padding: 3px 8px;
+            margin-left: 5px;
+            border: 1px solid #dc3545;
+            border-radius: 3px;
+            font-size: 0.85em;
+            background: white;
+            transition: all 0.2s;
+        }
+        
+        .delete-btn:hover {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .property-info {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-top: 3px;
+            font-style: italic;
+        }
+        
+        .reference-container {
+            display: inline-block;
+        }
+        
+        .reference-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .reference-btn:hover {
+            background: #138496;
+            color: white;
+        }
+        
+        .node-card.highlight {
+            animation: highlightPulse 2s ease-in-out;
+        }
+        
+        @keyframes highlightPulse {
+            0%, 100% { background: inherit; }
+            50% { background: #fff3cd; }
+        }
+        
+        .legend-box {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .legend-item {
+            display: inline-block;
+            margin-right: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 3px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+        
+        .tooltip-icon {
+            cursor: help;
+            color: #007bff;
+            margin-left: 5px;
+        }
+        
+        .add-property-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f0f7ff;
+            border-left: 3px solid #007bff;
+        }
+        
+        .add-property-controls {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .property-dropdown-wrapper {
+            flex: 1;
+            max-width: 400px;
+        }
+        
+        .property-dropdown {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }
+        
+        .property-dropdown option[data-required="true"] {
+            font-weight: bold;
+            color: #dc3545;
+        }
+        
+        .property-dropdown option[data-complex="true"] {
+            font-style: italic;
+            color: #007bff;
+        }
+        
+        .property-suggestion {
+            display: inline-block;
+            margin: 3px;
+            padding: 4px 8px;
+            background: #fff;
+            border: 1px solid #007bff;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .property-suggestion:hover {
+            background: #007bff;
+            color: white;
+        }
+        
+        .custom-property-input {
+            padding: 6px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.95em;
+        }        .property-suggestion .glyphicon {
+            margin-right: 5px;
+        }
+        
+        .hidden {
+            display: none;
         }
     </style>
 </head>
+<body>
+    <div class="toolbar">
+        <button id="toggle-edit-btn" class="btn btn-primary">
+            <span class="glyphicon glyphicon-edit"></span> Enable Editing
+        </button>
+        <button id="save-btn" class="btn btn-success hidden">
+            <span class="glyphicon glyphicon-floppy-disk"></span> Save Changes
+        </button>
+        <button id="validate-btn" class="btn btn-info">
+            <span class="glyphicon glyphicon-ok-circle"></span> Validate
+        </button>
+        <button id="export-btn" class="btn btn-default">
+            <span class="glyphicon glyphicon-download-alt"></span> Export JSON-LD
+        </button>
+        <button id="collapse-all-btn" class="btn btn-default">
+            <span class="glyphicon glyphicon-collapse-up"></span> Collapse All
+        </button>
+        <button id="expand-all-btn" class="btn btn-default">
+            <span class="glyphicon glyphicon-expand"></span> Expand All
+        </button>
+        <button id="filter-shacl-btn" class="btn btn-default" title="Toggle to show only SHACL-defined properties">
+            <span class="glyphicon glyphicon-filter"></span> Show SHACL Only
+        </button>
+        <span id="validation-status"></span>
+        <div style="float: right; width: 300px;">
+            <input type="text" id="search-input" class="form-control" placeholder="Search nodes and properties...">
+        </div>
+    </div>
 
-<body class="container">
-    <main><img id='logo' alt='Site Logo'>
-        <h1 class="page-title cdiPreviewText">CDI Preview</h1>
-        
-        <!-- Edit/Save toolbar -->
-        <div class="edit-toolbar" style="margin-bottom: 20px; padding: 15px; background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; display: none;">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="api-token-input">API Token (required for saving):</label>
-                        <input type="password" id="api-token-input" class="form-control" placeholder="Enter your Dataverse API token">
-                        <small class="help-block">Your API token is required to save changes back to Dataverse.</small>
+    <div class="preview-header">
+        <h3>CDI Data Viewer & Editor</h3>
+        <p>Displaying DDI-CDI (Cross Domain Integration) metadata. Edit mode allows you to modify properties and validate against SHACL shapes.</p>
+    </div>
+
+    <div class="legend-box">
+        <strong>Field Types:</strong>
+        <div class="legend-item">
+            <span class="legend-color" style="background: #007bff;"></span>
+            <span>SHACL Defined</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background: #ffc107;"></span>
+            <span>Extra Field (not in shape)</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background: #dc3545;"></span>
+            <span>Invalid</span>
+        </div>
+        <div class="legend-item">
+            <span class="legend-color" style="background: #17a2b8;"></span>
+            <span>Modified</span>
+        </div>
+        <div class="legend-item">
+            <span style="font-weight: bold; color: #dc3545;">* </span>
+            <span>Required Field</span>
+        </div>
+    </div>
+
+    <div id="content"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/n3/browser/n3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsonld/dist/jsonld.min.js"></script>
+    <script>
+        let jsonData = null;
+        let shaclShapes = null;
+        let shaclShapesStore = null;
+        let isEditMode = false;
+        let originalData = null;
+        let validationReport = null;
+        let fileId = null;
+        let siteUrl = null;
+        let expandedJsonLd = null; // Store expanded JSON-LD for property URI lookup
+
+        // Initialize
+        $(document).ready(async function() {
+            try {
+                // Get file URL from query parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                let fileUrl;
+                
+                // Store for saving later
+                fileId = urlParams.get('fileid');
+                siteUrl = urlParams.get('siteUrl');
+                const testFile = urlParams.get('testfile');
+                
+                if (fileId && siteUrl) {
+                    // Production mode: load from Dataverse API
+                    fileUrl = siteUrl + '/api/access/datafile/' + fileId;
+                } else if (testFile) {
+                    // Test mode with specific file
+                    fileUrl = '../../examples/cdi/' + testFile;
+                } else {
+                    // Default test file
+                    fileUrl = '../../examples/cdi/SimpleSample.jsonld';
+                }
+                
+                // Load JSON-LD data
+                const response = await fetch(fileUrl);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                // Check content type
+                const contentType = response.headers.get('content-type');
+                if (contentType && !contentType.includes('json')) {
+                    throw new Error(`Invalid content type: ${contentType}. This previewer requires JSON-LD files (application/ld+json or application/json).`);
+                }
+                
+                // Try to parse as JSON
+                let jsonText;
+                try {
+                    jsonText = await response.text();
+                    jsonData = JSON.parse(jsonText);
+                } catch (parseError) {
+                    throw new Error(`Failed to parse JSON: ${parseError.message}. This file may not be valid JSON-LD.`);
+                }
+                
+                // Validate it's JSON-LD with @graph
+                if (!jsonData['@graph']) {
+                    throw new Error('Invalid CDI structure: Missing required "@graph" property. This previewer requires DDI-CDI JSON-LD files with a @graph array.');
+                }
+                
+                originalData = JSON.parse(JSON.stringify(jsonData)); // Deep clone
+                
+                // Expand JSON-LD to get full property URIs
+                try {
+                    expandedJsonLd = await jsonld.expand(jsonData);
+                    console.log('Expanded JSON-LD for property URI mapping');
+                } catch (expandError) {
+                    console.warn('Could not expand JSON-LD:', expandError);
+                    expandedJsonLd = null;
+                }
+                
+                // Load SHACL shapes (for validation)
+                const shapesResponse = await fetch('shapes/CDIF-Discovery-Core-Shapes.ttl');
+                shaclShapes = await shapesResponse.text();
+                
+                // Parse SHACL shapes into N3 store - wait for completion
+                const parser = new N3.Parser();
+                shaclShapesStore = new N3.Store();
+                
+                await new Promise((resolve, reject) => {
+                    parser.parse(shaclShapes, (error, quad, prefixes) => {
+                        if (error) {
+                            reject(error);
+                        } else if (quad) {
+                            shaclShapesStore.addQuad(quad);
+                        } else {
+                            // quad is null when parsing is complete
+                            resolve();
+                        }
+                    });
+                });
+                
+                console.log('Loaded SHACL shapes, quad count:', shaclShapesStore.size);
+                
+                // Render the data
+                renderData();
+                
+                // Setup event handlers
+                setupEventHandlers();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                $('#content').html(`
+                    <div class="alert alert-danger">
+                        <strong>Error:</strong> Failed to load CDI data. ${error.message}
                     </div>
-                </div>
-                <div class="col-md-6" style="padding-top: 25px;">
-                    <button id="toggle-edit-btn" class="btn btn-primary">
-                        <span class="glyphicon glyphicon-edit"></span> Enable Editing
-                    </button>
-                    <button id="save-btn" class="btn btn-success" style="display: none;">
-                        <span class="glyphicon glyphicon-floppy-disk"></span> Save Changes
-                    </button>
-                    <span id="save-status" style="margin-left: 10px;"></span>
-                </div>
-            </div>
-        </div>
-        
-        <div class='preview-container'>
-            <div class='preview-header'></div>
-            <div class='preview'></div>
-        </div>
-    </main>
-</body>
+                `);
+            }
+        });
 
+        // Track which nodes have been rendered to avoid duplicates
+        let renderedNodes = new Set();
+        
+        function renderData() {
+            const content = $('#content');
+            content.empty();
+            renderedNodes.clear(); // Reset for each render
+            
+            if (!jsonData || !jsonData['@graph']) {
+                content.html('<div class="alert alert-warning">No data to display</div>');
+                return;
+            }
+            
+            // Build tree structure: find which nodes are referenced by others
+            const allNodeIds = new Set(jsonData['@graph'].map(n => n['@id']));
+            const referencedIds = new Set();
+            
+            jsonData['@graph'].forEach(node => {
+                Object.keys(node).forEach(key => {
+                    if (key !== '@id' && key !== '@type' && key !== '@context') {
+                        const value = node[key];
+                        const refs = extractNodeReferences(value);
+                        refs.forEach(ref => referencedIds.add(ref));
+                    }
+                });
+            });
+            
+            // Root nodes are those not referenced by any other node
+            const rootNodes = jsonData['@graph'].filter(n => !referencedIds.has(n['@id']));
+            
+            // Render root nodes (they will recursively render their children)
+            rootNodes.forEach((node, index) => {
+                const nodeCard = renderNodeTree(node, index, 0);
+                content.append(nodeCard);
+            });
+        }
+        
+        // Extract all @id references from a value (handles arrays, nested objects, and string references)
+        function extractNodeReferences(value) {
+            const refs = [];
+            if (Array.isArray(value)) {
+                value.forEach(item => {
+                    if (typeof item === 'object' && item['@id']) {
+                        refs.push(item['@id']);
+                    } else if (typeof item === 'string' && isNodeReference(item)) {
+                        refs.push(item);
+                    }
+                });
+            } else if (typeof value === 'object' && value !== null && value['@id']) {
+                refs.push(value['@id']);
+            } else if (typeof value === 'string' && isNodeReference(value)) {
+                refs.push(value);
+            }
+            return refs;
+        }
+        
+        // Check if a string value looks like a node reference
+        function isNodeReference(str) {
+            if (typeof str !== 'string') return false;
+            // Check if it starts with # or _: (common node ID patterns)
+            if (str.startsWith('#') || str.startsWith('_:')) {
+                // Verify this ID actually exists in the graph
+                return jsonData['@graph'].some(n => n['@id'] === str);
+            }
+            return false;
+        }
+        
+        function renderNodeTree(node, index, depth) {
+            const id = node['@id'] || `_:blank${index}`;
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            
+            // Mark this node as rendered
+            renderedNodes.add(id);
+            
+            const card = $('<div>').addClass('node-card tree-node').attr('data-node-id', id).css('margin-left', `${depth * 15}px`);
+            
+            // Header with collapse functionality
+            const header = $('<div>').addClass('node-header');
+            const leftSide = $('<div>').css('display', 'flex').css('align-items', 'center');
+            leftSide.append($('<span>').addClass('glyphicon glyphicon-chevron-down collapse-icon').css('margin-right', '10px'));
+            leftSide.append($('<span>').addClass('node-id').text(id));
+            types.forEach(type => {
+                if (type) {
+                    leftSide.append($('<span>').addClass('node-type').text(type));
+                }
+            });
+            header.append(leftSide);
+            
+            // Add click handler to collapse/expand
+            header.click(function() {
+                card.toggleClass('collapsed');
+            });
+            
+            card.append(header);
+            
+            // Body with properties
+            const body = $('<div>').addClass('node-body');
+            if (!isEditMode) {
+                body.addClass('view-mode');
+            }
+            
+            // Render all properties except @id and @type
+            Object.keys(node).forEach(key => {
+                if (key !== '@id' && key !== '@type' && key !== '@context') {
+                    const propertyRow = renderPropertyTree(key, node[key], id, types, depth);
+                    body.append(propertyRow);
+                }
+            });
+            
+            card.append(body);
+            
+            // Add property suggestions in edit mode
+            if (isEditMode && shaclShapesStore) {
+                const suggestions = getPropertySuggestions(node, types);
+
+                if (suggestions.length > 0) {
+                    const suggestionsSection = createPropertySuggestionsSection(suggestions, id, body);
+                    card.append(suggestionsSection);
+                } else {
+                    // Even with no SHACL suggestions, allow adding custom properties
+                    const emptySection = $('<div>').addClass('add-property-section');
+                    emptySection.append($('<h4>').text('Add Properties').css({'margin-top': '0', 'margin-bottom': '10px'}));
+                    const addCustomBtn = $('<button>')
+                        .addClass('btn btn-default')
+                        .html('<span class="glyphicon glyphicon-edit"></span> Add Custom Property')
+                        .click(function() {
+                            const propName = prompt('Enter custom property name:');
+                            if (propName) {
+                                addPropertyToNode(id, propName, '', body);
+                            }
+                        });
+                    emptySection.append(addCustomBtn);
+                    card.append(emptySection);
+                }
+            }
+            
+            return card;
+        }
+
+        function renderNode(node, index) {
+            const id = node['@id'] || `_:blank${index}`;
+            const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+            
+            const card = $('<div>').addClass('node-card').attr('data-node-id', id);
+            
+            // Header with collapse functionality
+            const header = $('<div>').addClass('node-header');
+            const leftSide = $('<div>').css('display', 'flex').css('align-items', 'center');
+            leftSide.append($('<span>').addClass('glyphicon glyphicon-chevron-down collapse-icon').css('margin-right', '10px'));
+            leftSide.append($('<span>').addClass('node-id').text(id));
+            types.forEach(type => {
+                if (type) {
+                    leftSide.append($('<span>').addClass('node-type').text(type));
+                }
+            });
+            header.append(leftSide);
+            
+            // Add click handler to collapse/expand
+            header.click(function() {
+                card.toggleClass('collapsed');
+            });
+            
+            card.append(header);
+            
+            // Body with properties
+            const body = $('<div>').addClass('node-body');
+            if (!isEditMode) {
+                body.addClass('view-mode');
+            }
+            
+            // Render all properties except @id and @type
+            Object.keys(node).forEach(key => {
+                if (key !== '@id' && key !== '@type' && key !== '@context') {
+                    const propertyRow = renderProperty(key, node[key], id, types);
+                    body.append(propertyRow);
+                }
+            });
+            
+            card.append(body);
+            
+            // Add property suggestions in edit mode
+            if (isEditMode && shaclShapesStore) {
+                const suggestions = getPropertySuggestions(node, types);
+
+                if (suggestions.length > 0) {
+                    const suggestionsSection = createPropertySuggestionsSection(suggestions, id, body);
+                    card.append(suggestionsSection);
+                } else {
+                    // Even with no SHACL suggestions, allow adding custom properties
+                    const emptySection = $('<div>').addClass('add-property-section');
+                    emptySection.append($('<h4>').text('Add Properties').css({'margin-top': '0', 'margin-bottom': '10px'}));
+                    const addCustomBtn = $('<button>')
+                        .addClass('btn btn-default')
+                        .html('<span class="glyphicon glyphicon-edit"></span> Add Custom Property')
+                        .click(function() {
+                            const propName = prompt('Enter custom property name:');
+                            if (propName) {
+                                addPropertyToNode(id, propName, '', body);
+                            }
+                        });
+                    emptySection.append(addCustomBtn);
+                    card.append(emptySection);
+                }
+            }
+            
+            return card;
+        }
+        
+        function renderPropertyTree(key, value, nodeId, nodeTypes, depth) {
+            const container = $('<div>');
+            
+            // First render the property itself
+            const row = renderProperty(key, value, nodeId, nodeTypes);
+            container.append(row);
+            
+            // Then check if this property references other nodes
+            const refs = extractNodeReferences(value);
+            if (refs.length > 0) {
+                refs.forEach(refId => {
+                    const refNode = jsonData['@graph'].find(n => n['@id'] === refId);
+                    if (refNode) {
+                        // Only render inline if this node hasn't been rendered yet
+                        if (!renderedNodes.has(refId)) {
+                            const childCard = renderNodeTree(refNode, 0, depth + 1);
+                            container.append(childCard);
+                        } else {
+                            // Node already rendered elsewhere - show a reference link
+                            const refLink = $('<div>')
+                                .addClass('node-reference-link')
+                                .css({
+                                    'margin-left': `${(depth + 1) * 15}px`,
+                                    'padding': '5px',
+                                    'margin-bottom': '3px'
+                                });
+                            
+                            const jumpBtn = $('<button>')
+                                .addClass('btn btn-sm btn-default')
+                                .html(`<span class="glyphicon glyphicon-arrow-right"></span> → ${refId}`)
+                                .attr('title', 'Click to jump to this node')
+                                .click(function(e) {
+                                    e.preventDefault();
+                                    const targetCard = $(`.node-card[data-node-id="${refId}"]`);
+                                    if (targetCard.length) {
+                                        targetCard.removeClass('collapsed');
+                                        targetCard[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                                        targetCard.addClass('highlight');
+                                        setTimeout(() => targetCard.removeClass('highlight'), 2000);
+                                    }
+                                });
+                            
+                            refLink.append(jumpBtn);
+                            container.append(refLink);
+                        }
+                    }
+                });
+            }
+            
+            return container;
+        }
+
+        function renderProperty(key, value, nodeId, nodeTypes) {
+            const row = $('<div>').addClass('property-row').attr('data-property', key).attr('data-node-id', nodeId);
+            
+            // Classify property using SHACL (pass nodeId for URI expansion)
+            const classification = classifyProperty(nodeTypes || [], key, nodeId);
+            
+            // Apply CSS classes based on classification
+            if (classification.isInShape) {
+                row.addClass('shacl-defined');
+            } else {
+                row.addClass('extra-field');
+            }
+            
+            if (classification.isRequired) {
+                row.addClass('required');
+            }
+            
+            // Add property badge
+            const badge = $('<span>').addClass('property-badge');
+            if (classification.isRequired) {
+                badge.addClass('required').text('REQUIRED');
+            } else if (classification.isInShape) {
+                badge.addClass('optional').text('OPTIONAL');
+            } else {
+                badge.addClass('extra').text('EXTRA');
+            }
+            row.append(badge);
+            
+            // Add tooltip icon if there's a description
+            if (classification.description) {
+                const tooltip = $('<span>')
+                    .addClass('tooltip-icon glyphicon glyphicon-question-sign')
+                    .attr('title', classification.description)
+                    .css({'margin-left': '5px', 'cursor': 'help'});
+                badge.after(tooltip);
+            }
+            
+            // Label
+            const label = $('<div>').addClass('property-label').text(humanizeKey(key));
+            const path = $('<div>').addClass('property-path').text(key);
+            row.append(label, path);
+            
+            // Value
+            const valueContainer = $('<div>').addClass('property-value');
+            
+            if (Array.isArray(value)) {
+                // Array of values
+                value.forEach((val, idx) => {
+                    const valDiv = $('<div>').addClass('array-value');
+                    valDiv.append(createValueInput(key, val, nodeId, idx, classification));
+                    
+                    // Add delete button in edit mode
+                    if (isEditMode) {
+                        const deleteBtn = $('<button>')
+                            .addClass('btn btn-xs delete-btn')
+                            .html('<span class="glyphicon glyphicon-trash"></span>')
+                            .click(function() {
+                                if (confirm('Delete this value?')) {
+                                    valDiv.remove();
+                                    row.addClass('changed');
+                                    updateSaveButton();
+                                }
+                            });
+                        valDiv.append(deleteBtn);
+                    }
+                    
+                    valueContainer.append(valDiv);
+                });
+                if (isEditMode) {
+                    const addBtn = $('<button>')
+                        .addClass('btn btn-sm btn-default add-value-btn')
+                        .html('<span class="glyphicon glyphicon-plus"></span> Add Value')
+                        .click(function() {
+                            const newValDiv = $('<div>').addClass('array-value');
+                            newValDiv.append(createValueInput(key, '', nodeId, value.length, classification));
+                            
+                            // Add delete button for the new value
+                            const deleteBtn = $('<button>')
+                                .addClass('btn btn-xs delete-btn')
+                                .html('<span class="glyphicon glyphicon-trash"></span>')
+                                .css({'margin-left': '10px'})
+                                .click(function() {
+                                    newValDiv.addClass('deleted').fadeOut(300, function() {
+                                        $(this).remove();
+                                    });
+                                    updateSaveButton();
+                                });
+                            newValDiv.append(deleteBtn);
+                            
+                            $(this).before(newValDiv);
+                            updateSaveButton();
+                        });
+                    valueContainer.append(addBtn);
+                }
+            } else {
+                // Single value
+                valueContainer.append(createValueInput(key, value, nodeId, null, classification));
+                
+                // Add delete button in edit mode (for non-required fields only)
+                if (isEditMode && !classification.isRequired) {
+                    const deleteBtn = $('<button>')
+                        .addClass('btn btn-xs delete-btn')
+                        .html('<span class="glyphicon glyphicon-trash"></span>')
+                        .css({'margin-left': '10px'})
+                        .click(function() {
+                            if (confirm('Delete this property?')) {
+                                row.addClass('deleted').fadeOut(300, function() {
+                                    $(this).remove();
+                                });
+                                updateSaveButton();
+                            }
+                        });
+                    valueContainer.append(deleteBtn);
+                }
+            }
+            
+            // Add description as info text if available
+            if (classification.description && isEditMode) {
+                const infoText = $('<div>')
+                    .addClass('property-info')
+                    .text(classification.description);
+                valueContainer.append(infoText);
+            }
+            
+            row.append(valueContainer);
+            return row;
+        }
+
+        function createValueInput(key, value, nodeId, arrayIndex, classification) {
+            // Check if value is a reference to another node (has @id)
+            if (typeof value === 'object' && value !== null && value['@id']) {
+                const refId = value['@id'];
+                const refContainer = $('<div>').addClass('reference-container');
+                
+                // Create a clickable button to jump to the referenced node
+                const jumpBtn = $('<button>')
+                    .addClass('btn btn-sm btn-info reference-btn')
+                    .html(`<span class="glyphicon glyphicon-arrow-right"></span> ${refId}`)
+                    .attr('title', 'Click to jump to this node')
+                    .click(function(e) {
+                        e.preventDefault();
+                        const targetCard = $(`.node-card[data-node-id="${refId}"]`);
+                        if (targetCard.length) {
+                            targetCard.removeClass('collapsed');
+                            targetCard[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                            targetCard.addClass('highlight');
+                            setTimeout(() => targetCard.removeClass('highlight'), 2000);
+                        } else {
+                            alert('Referenced node not found: ' + refId);
+                        }
+                    });
+                
+                refContainer.append(jumpBtn);
+                return refContainer;
+            }
+            
+            // Check if string value is a node reference (like "#Sample_Key")
+            if (typeof value === 'string' && isNodeReference(value)) {
+                const refContainer = $('<div>').addClass('reference-container');
+                
+                const jumpBtn = $('<button>')
+                    .addClass('btn btn-sm btn-info reference-btn')
+                    .html(`<span class="glyphicon glyphicon-arrow-right"></span> ${value}`)
+                    .attr('title', 'Click to jump to this node')
+                    .click(function(e) {
+                        e.preventDefault();
+                        const targetCard = $(`.node-card[data-node-id="${value}"]`);
+                        if (targetCard.length) {
+                            targetCard.removeClass('collapsed');
+                            targetCard[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                            targetCard.addClass('highlight');
+                            setTimeout(() => targetCard.removeClass('highlight'), 2000);
+                        } else {
+                            alert('Referenced node not found: ' + value);
+                        }
+                    });
+                
+                refContainer.append(jumpBtn);
+                return refContainer;
+            }
+            
+            // Simple value (string, number, etc.)
+            const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
+            
+            if (isEditMode) {
+                // Determine input type based on classification
+                const inputType = classification ? classification.inputType : 'text';
+                
+                let input;
+                if (valueStr.length > 50) {
+                    input = $('<textarea>').val(valueStr);
+                } else {
+                    input = $('<input>').attr('type', inputType).val(valueStr);
+                }
+                
+                input.attr('data-original', valueStr);
+                input.on('input', function() {
+                    // Mark as changed
+                    $(this).closest('.property-row').addClass('changed');
+                    updateSaveButton();
+                });
+                
+                return input;
+            } else {
+                return $('<div>').addClass('value-display').text(valueStr);
+            }
+        }
+
+        function humanizeKey(key) {
+            // Convert camelCase or snake_case to human readable
+            return key
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/_/g, ' ')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+        }
+        
+        // Get the expanded URI for a property from the expanded JSON-LD
+        function getExpandedPropertyUri(nodeId, propertyKey) {
+            if (!expandedJsonLd || !Array.isArray(expandedJsonLd)) {
+                return null;
+            }
+            
+            // Find the node in expanded JSON-LD
+            const expandedNode = expandedJsonLd.find(n => n['@id'] === nodeId);
+            if (!expandedNode) {
+                return null;
+            }
+            
+            // Look through all properties to find one that might match
+            for (const key in expandedNode) {
+                if (key === '@id' || key === '@type') continue;
+                
+                // The expanded key is the full URI, extract the local part
+                const localPart = key.split('/').pop().split('#').pop();
+                
+                // Check if this matches our property key
+                if (localPart === propertyKey || key === propertyKey) {
+                    return key; // Return the full URI
+                }
+            }
+            
+            return null;
+        }
+        
+        // Classify a property based on SHACL shapes
+        function classifyProperty(nodeTypes, propertyKey, nodeId = null) {
+            const result = {
+                isInShape: false,
+                isRequired: false,
+                datatype: null,
+                description: '',
+                allowedValues: null,
+                pattern: null,
+                inputType: 'text',
+                minCount: 0,
+                maxCount: null,
+                nodeShape: null,
+                nodeClass: null
+            };
+            
+            if (!shaclShapesStore || nodeTypes.length === 0) return result;
+            
+            // Try to get the expanded URI for this property
+            const expandedUri = nodeId ? getExpandedPropertyUri(nodeId, propertyKey) : null;
+            
+            try {
+                // Find the NodeShape that targets these classes
+                nodeTypes.forEach(type => {
+                    const typeUri = type.startsWith('http') ? type : 'http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/' + type;
+                    
+                    const targetClassQuads = shaclShapesStore.getQuads(
+                        null,
+                        'http://www.w3.org/ns/shacl#targetClass',
+                        typeUri,
+                        null
+                    );
+                    
+                    targetClassQuads.forEach(quad => {
+                        const shapeSubject = quad.subject.value;
+                        
+                        // Get all sh:property predicates
+                        const propertyQuads = shaclShapesStore.getQuads(
+                            shapeSubject,
+                            'http://www.w3.org/ns/shacl#property',
+                            null,
+                            null
+                        );
+                        
+                        propertyQuads.forEach(propQuad => {
+                            const propertyShape = propQuad.object.value;
+                            
+                            // Get sh:path
+                            const pathQuads = shaclShapesStore.getQuads(
+                                propertyShape,
+                                'http://www.w3.org/ns/shacl#path',
+                                null,
+                                null
+                            );
+                            
+                            pathQuads.forEach(pathQuad => {
+                                const path = pathQuad.object.value;
+                                const pathName = path.split('/').pop().split('#').pop();
+                                
+                                // SHACL paths are like: cdi:WideDataSet-name or cdi:DataSet_isStructuredBy_DataStructure
+                                // Extract the property part after the class name and hyphen/underscore
+                                let shaclPropertyName = pathName;
+                                
+                                // Remove class prefix if present (e.g., "WideDataSet-name" -> "name")
+                                if (pathName.includes('-')) {
+                                    const parts = pathName.split('-');
+                                    if (parts.length > 1) {
+                                        shaclPropertyName = parts.slice(1).join('-');
+                                    }
+                                }
+                                
+                                // Also check for underscore patterns (e.g., "DataSet_isStructuredBy_DataStructure")
+                                if (pathName.includes('_')) {
+                                    const parts = pathName.split('_');
+                                    // The middle part is usually the property name
+                                    if (parts.length >= 2) {
+                                        shaclPropertyName = parts[1];
+                                    }
+                                }
+                                
+                                // Check if this matches our property using multiple strategies
+                                const matches = pathName === propertyKey ||  // Exact match with full path name
+                                              path === propertyKey ||  // Exact match with full URI
+                                              shaclPropertyName === propertyKey ||  // Match extracted property name
+                                              (expandedUri && path === expandedUri) ||  // Match with expanded URI if available
+                                              pathName.endsWith(propertyKey) ||  // Ends with property key
+                                              pathName.toLowerCase().includes(propertyKey.toLowerCase());  // Contains property key (case insensitive)
+                                
+                                if (matches) {
+                                    result.isInShape = true;
+                                    
+                                    // Check sh:minCount for required
+                                    const minCountQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#minCount',
+                                        null,
+                                        null
+                                    );
+                                    if (minCountQuads.length > 0) {
+                                        result.minCount = parseInt(minCountQuads[0].object.value);
+                                        result.isRequired = result.minCount > 0;
+                                    }
+                                    
+                                    // Check sh:maxCount for cardinality
+                                    const maxCountQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#maxCount',
+                                        null,
+                                        null
+                                    );
+                                    if (maxCountQuads.length > 0) {
+                                        result.maxCount = parseInt(maxCountQuads[0].object.value);
+                                    }
+                                    
+                                    // Check sh:node for complex objects
+                                    const nodeQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#node',
+                                        null,
+                                        null
+                                    );
+                                    if (nodeQuads.length > 0) {
+                                        result.nodeShape = nodeQuads[0].object.value;
+                                    }
+                                    
+                                    // Check sh:class for object type
+                                    const classQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#class',
+                                        null,
+                                        null
+                                    );
+                                    if (classQuads.length > 0) {
+                                        result.nodeClass = classQuads[0].object.value;
+                                    }
+                                    
+                                    // Get sh:datatype
+                                    const datatypeQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#datatype',
+                                        null,
+                                        null
+                                    );
+                                    if (datatypeQuads.length > 0) {
+                                        result.datatype = datatypeQuads[0].object.value;
+                                        
+                                        // Determine input type based on datatype
+                                        const dt = result.datatype.toLowerCase();
+                                        if (dt.includes('integer') || dt.includes('int') || dt.includes('decimal') || dt.includes('double') || dt.includes('float')) {
+                                            result.inputType = 'number';
+                                        } else if (dt.includes('date') && !dt.includes('datetime')) {
+                                            result.inputType = 'date';
+                                        } else if (dt.includes('datetime')) {
+                                            result.inputType = 'datetime-local';
+                                        } else if (dt.includes('anyuri')) {
+                                            result.inputType = 'url';
+                                        }
+                                    }
+                                    
+                                    // Get sh:description
+                                    const descQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#description',
+                                        null,
+                                        null
+                                    );
+                                    if (descQuads.length > 0) {
+                                        result.description = descQuads[0].object.value;
+                                    }
+                                    
+                                    // Get sh:in (allowed values)
+                                    const inQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#in',
+                                        null,
+                                        null
+                                    );
+                                    if (inQuads.length > 0) {
+                                        // This is a controlled vocabulary - collect list values
+                                        result.allowedValues = [];
+                                        // TODO: Parse RDF list properly
+                                    }
+                                    
+                                    // Get sh:pattern
+                                    const patternQuads = shaclShapesStore.getQuads(
+                                        propertyShape,
+                                        'http://www.w3.org/ns/shacl#pattern',
+                                        null,
+                                        null
+                                    );
+                                    if (patternQuads.length > 0) {
+                                        result.pattern = patternQuads[0].object.value;
+                                    }
+                                }
+                            });
+                        });
+                    });
+                });
+            } catch (err) {
+                console.error('Error classifying property:', err);
+            }
+            
+            return result;
+        }
+        
+        function getPropertySuggestions(node, types) {
+            if (!shaclShapesStore || types.length === 0) {
+                return [];
+            }
+            
+            const suggestions = [];
+            const existingProperties = Object.keys(node).filter(k => k !== '@id' && k !== '@type' && k !== '@context');
+            
+            // Find SHACL shapes that match the node types
+            types.forEach(type => {
+                // Look for NodeShapes with sh:targetClass matching this type
+                const targetClassQuads = shaclShapesStore.getQuads(
+                    null,
+                    'http://www.w3.org/ns/shacl#targetClass',
+                    type.startsWith('http') ? type : 'http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/' + type,
+                    null
+                );
+                
+                targetClassQuads.forEach(quad => {
+                    const shapeSubject = quad.subject.value;
+                    
+                    // Get all sh:property predicates for this shape
+                    const propertyQuads = shaclShapesStore.getQuads(
+                        shapeSubject,
+                        'http://www.w3.org/ns/shacl#property',
+                        null,
+                        null
+                    );
+                    
+                    propertyQuads.forEach(propQuad => {
+                        const propertyShape = propQuad.object.value;
+                        
+                        // Get sh:path for this property
+                        const pathQuads = shaclShapesStore.getQuads(
+                            propertyShape,
+                            'http://www.w3.org/ns/shacl#path',
+                            null,
+                            null
+                        );
+                        
+                        pathQuads.forEach(pathQuad => {
+                            const path = pathQuad.object.value;
+                            const pathName = path.split('/').pop().split('#').pop();
+                            
+                            // Check if this property already exists
+                            if (!existingProperties.includes(pathName) && !existingProperties.includes(path)) {
+                                // Get sh:name for human-readable label
+                                const nameQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#name',
+                                    null,
+                                    null
+                                );
+                                
+                                const label = nameQuads.length > 0 
+                                    ? nameQuads[0].object.value 
+                                    : humanizeKey(pathName);
+                                
+                                // Get minCount
+                                const minCountQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#minCount',
+                                    null,
+                                    null
+                                );
+                                const required = minCountQuads.length > 0 && parseInt(minCountQuads[0].object.value) > 0;
+                                
+                                // Get maxCount
+                                const maxCountQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#maxCount',
+                                    null,
+                                    null
+                                );
+                                const maxCount = maxCountQuads.length > 0 ? parseInt(maxCountQuads[0].object.value) : null;
+                                
+                                // Check if it's a complex object (sh:node or sh:class)
+                                const nodeQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#node',
+                                    null,
+                                    null
+                                );
+                                const classQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#class',
+                                    null,
+                                    null
+                                );
+                                const isComplex = nodeQuads.length > 0 || classQuads.length > 0;
+                                
+                                // Get the class from sh:class or find it from sh:node's targetClass or sh:in
+                                let nodeClass = null;
+                                if (classQuads.length > 0) {
+                                    nodeClass = classQuads[0].object.value;
+                                } else if (nodeQuads.length > 0) {
+                                    // sh:node points to another NodeShape (might be a blank node)
+                                    // Use the actual node object, not just the value
+                                    const nodeShapeNode = nodeQuads[0].object;
+                                    
+                                    // Try to get targetClass (using the node object, not string)
+                                    const targetClassQuads = shaclShapesStore.getQuads(
+                                        nodeShapeNode,
+                                        'http://www.w3.org/ns/shacl#targetClass',
+                                        null,
+                                        null
+                                    );
+                                    
+                                    if (targetClassQuads.length > 0) {
+                                        nodeClass = targetClassQuads[0].object.value;
+                                    } else {
+                                        // If no targetClass, look for sh:property -> sh:path rdf:type -> sh:in
+                                        // This handles inline blank node shapes with sh:in constraints
+                                        const propertyConstraints = shaclShapesStore.getQuads(
+                                            nodeShapeNode,
+                                            'http://www.w3.org/ns/shacl#property',
+                                            null,
+                                            null
+                                        );
+                                        
+                                        for (const propQuad of propertyConstraints) {
+                                            const propShape = propQuad.object;
+                                            
+                                            // Check if this is a type constraint (sh:path rdf:type)
+                                            const pathQuads = shaclShapesStore.getQuads(
+                                                propShape,
+                                                'http://www.w3.org/ns/shacl#path',
+                                                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                                                null
+                                            );
+                                            
+                                            if (pathQuads.length > 0) {
+                                                // Found rdf:type constraint, look for sh:in
+                                                const inQuads = shaclShapesStore.getQuads(
+                                                    propShape,
+                                                    'http://www.w3.org/ns/shacl#in',
+                                                    null,
+                                                    null
+                                                );
+                                                
+                                                if (inQuads.length > 0) {
+                                                    // sh:in points to an RDF list, get the first item
+                                                    let listNode = inQuads[0].object;  // Use object, not value!
+                                                    
+                                                    const firstQuads = shaclShapesStore.getQuads(
+                                                        listNode,
+                                                        'http://www.w3.org/1999/02/22-rdf-syntax-ns#first',
+                                                        null,
+                                                        null
+                                                    );
+                                                    
+                                                    if (firstQuads.length > 0) {
+                                                        nodeClass = firstQuads[0].object.value;
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Get description
+                                const descQuads = shaclShapesStore.getQuads(
+                                    propertyShape,
+                                    'http://www.w3.org/ns/shacl#description',
+                                    null,
+                                    null
+                                );
+                                const description = descQuads.length > 0 ? descQuads[0].object.value : '';
+                                
+                                suggestions.push({
+                                    path: pathName,
+                                    fullPath: path,
+                                    label: label,
+                                    required: required,
+                                    maxCount: maxCount,
+                                    isComplex: isComplex,
+                                    nodeClass: nodeClass,
+                                    description: description
+                                });
+                            }
+                        });
+                    });
+                });
+            });
+            
+            // Remove duplicates
+            const unique = [];
+            const seen = new Set();
+            suggestions.forEach(s => {
+                if (!seen.has(s.path)) {
+                    seen.add(s.path);
+                    unique.push(s);
+                }
+            });
+            
+            return unique;
+        }
+        
+        function createPropertySuggestionsSection(suggestions, nodeId, bodyElement) {
+            const section = $('<div>').addClass('add-property-section');
+            section.append($('<h4>').text('Add Properties').css({'margin-top': '0', 'margin-bottom': '10px'}));
+            
+            // Sort: required first, then alphabetically
+            suggestions.sort((a, b) => {
+                if (a.required && !b.required) return -1;
+                if (!a.required && b.required) return 1;
+                return a.label.localeCompare(b.label);
+            });
+            
+            // Control row with dropdown and buttons
+            const controlRow = $('<div>').addClass('add-property-controls');
+            
+            // Searchable dropdown
+            const dropdownWrapper = $('<div>').addClass('property-dropdown-wrapper');
+            const dropdown = $('<select>').addClass('property-dropdown');
+            dropdown.append($('<option>').val('').text('-- Select a property to add --'));
+            
+            suggestions.forEach(suggestion => {
+                const option = $('<option>')
+                    .val(suggestion.path)
+                    .attr('data-required', suggestion.required)
+                    .attr('data-complex', suggestion.isComplex)
+                    .attr('data-max-count', suggestion.maxCount || '')
+                    .attr('data-node-class', suggestion.nodeClass || '')
+                    .attr('data-description', suggestion.description)
+                    .data('suggestion', suggestion);
+                
+                let text = suggestion.label;
+                if (suggestion.required) text = '⚠ ' + text + ' (REQUIRED)';
+                if (suggestion.isComplex) text = text + ' [object]';
+                if (suggestion.maxCount === 1) text = text + ' (max 1)';
+                
+                option.text(text);
+                dropdown.append(option);
+            });
+            
+            dropdownWrapper.append(dropdown);
+            controlRow.append(dropdownWrapper);
+            
+            // Add button
+            const addBtn = $('<button>')
+                .addClass('btn btn-primary')
+                .html('<span class="glyphicon glyphicon-plus"></span> Add Property')
+                .click(function() {
+                    const selectedPath = dropdown.val();
+                    if (!selectedPath) {
+                        alert('Please select a property first');
+                        return;
+                    }
+                    
+                    const selectedOption = dropdown.find('option:selected');
+                    const suggestion = selectedOption.data('suggestion');
+                    
+                    if (suggestion.isComplex) {
+                        // Always create a separate node and reference it
+                        addComplexPropertyToNode(nodeId, suggestion, bodyElement);
+                    } else {
+                        // Add simple property with empty string as initial value
+                        addPropertyToNode(nodeId, suggestion.path, '', bodyElement);
+                    }
+                    
+                    // Remove from dropdown if maxCount = 1
+                    if (suggestion.maxCount === 1) {
+                        selectedOption.remove();
+                    }
+                    
+                    dropdown.val('');
+                });
+            
+            controlRow.append(addBtn);
+            
+            // Add Custom Property button
+            const addCustomBtn = $('<button>')
+                .addClass('btn btn-default')
+                .html('<span class="glyphicon glyphicon-edit"></span> Add Custom Property')
+                .click(function() {
+                    const propName = prompt('Enter custom property name:');
+                    if (propName) {
+                        addPropertyToNode(nodeId, propName, '', bodyElement);
+                    }
+                });
+            
+            controlRow.append(addCustomBtn);
+            
+            section.append(controlRow);
+            
+            // Description area (shows when property is selected)
+            const descArea = $('<div>')
+                .addClass('property-info')
+                .css({'margin-top': '10px', 'display': 'none'});
+            section.append(descArea);
+            
+            // Show description on selection change
+            dropdown.on('change', function() {
+                const selectedOption = $(this).find('option:selected');
+                const description = selectedOption.attr('data-description');
+                if (description) {
+                    descArea.text(description).show();
+                } else {
+                    descArea.hide();
+                }
+            });
+            
+            return section;
+        }
+        
+        function addComplexPropertyToNode(nodeId, suggestion, bodyElement) {
+            // Create a new node in the @graph
+            const newNodeId = `_:${suggestion.path}_${Date.now()}`;
+            
+            // Extract class name from full URI or use the short name
+            let className = suggestion.nodeClass || 'Object';
+            
+            // If it's a full URI, extract just the class name
+            if (className.includes('/') || className.includes('#')) {
+                className = className.split('/').pop().split('#').pop();
+            }
+            
+            const newNode = {
+                '@id': newNodeId,
+                '@type': className
+            };
+            
+            // Add to graph
+            if (!jsonData['@graph']) {
+                jsonData['@graph'] = [];
+            }
+            jsonData['@graph'].push(newNode);
+            
+            // Add reference to parent node
+            const parentNode = jsonData['@graph'].find(n => n['@id'] === nodeId);
+            if (parentNode) {
+                if (suggestion.maxCount === 1) {
+                    parentNode[suggestion.path] = {'@id': newNodeId};
+                } else {
+                    if (!parentNode[suggestion.path]) {
+                        parentNode[suggestion.path] = [];
+                    }
+                    if (Array.isArray(parentNode[suggestion.path])) {
+                        parentNode[suggestion.path].push({'@id': newNodeId});
+                    } else {
+                        parentNode[suggestion.path] = [parentNode[suggestion.path], {'@id': newNodeId}];
+                    }
+                }
+            }
+            
+            // Re-render everything
+            renderData();
+            updateSaveButton();
+            
+            // Scroll to new node
+            setTimeout(() => {
+                const newCard = $(`.node-card[data-node-id="${newNodeId}"]`);
+                if (newCard.length) {
+                    newCard[0].scrollIntoView({behavior: 'smooth', block: 'center'});
+                    newCard.addClass('changed');
+                }
+            }, 100);
+        }
+        
+        function addPropertyToNode(nodeId, propertyKey, initialValue, bodyElement) {
+            // Add the property to the data and get node types
+            let nodeTypes = [];
+            jsonData['@graph'].forEach(node => {
+                if (node['@id'] === nodeId) {
+                    node[propertyKey] = initialValue;
+                    nodeTypes = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+                }
+            });
+            
+            // Re-render just this node's body with proper classification
+            const propertyRow = renderProperty(propertyKey, initialValue, nodeId, nodeTypes);
+            bodyElement.append(propertyRow);
+            
+            // Mark as changed
+            propertyRow.addClass('changed');
+            updateSaveButton();
+        }
+
+        function setupEventHandlers() {
+            // Toggle edit mode
+            $('#toggle-edit-btn').click(function() {
+                isEditMode = !isEditMode;
+                
+                if (isEditMode) {
+                    $(this).html('<span class="glyphicon glyphicon-eye-open"></span> View Mode')
+                           .removeClass('btn-primary').addClass('btn-warning');
+                    $('#save-btn').removeClass('hidden');
+                    
+                    // Auto-validate when entering edit mode
+                    validateData();
+                } else {
+                    $(this).html('<span class="glyphicon glyphicon-edit"></span> Enable Editing')
+                           .removeClass('btn-warning').addClass('btn-primary');
+                    $('#save-btn').addClass('hidden');
+                }
+                
+                renderData();
+            });
+            
+            // Save changes
+            $('#save-btn').click(function() {
+                // Validate before saving
+                const savedValidationStatus = $('#validation-status').html();
+                validateData();
+                
+                // Check if validation passed
+                setTimeout(() => {
+                    if (validationReport && !validationReport.conforms) {
+                        if (!confirm('Data has validation errors. Save anyway?')) {
+                            return;
+                        }
+                    }
+                    saveChanges();
+                }, 500);
+            });
+            
+            // Validate
+            $('#validate-btn').click(function() {
+                validateData();
+            });
+            
+            // Export
+            $('#export-btn').click(function() {
+                exportData();
+            });
+            
+            // Collapse all
+            $('#collapse-all-btn').click(function() {
+                $('.node-card').addClass('collapsed');
+            });
+            
+            // Expand all
+            $('#expand-all-btn').click(function() {
+                $('.node-card').removeClass('collapsed');
+            });
+            
+            // Toggle SHACL-only filter
+            $('#filter-shacl-btn').click(function() {
+                const btn = $(this);
+                $('body').toggleClass('filter-shacl-only');
+                
+                if ($('body').hasClass('filter-shacl-only')) {
+                    btn.addClass('active');
+                    btn.html('<span class="glyphicon glyphicon-filter"></span> Show All');
+                    
+                    // Hide nodes that have no SHACL-defined properties visible
+                    $('.node-card').each(function() {
+                        const card = $(this);
+                        const visibleProps = card.find('.property-row:not(.extra-field)').length;
+                        if (visibleProps === 0) {
+                            card.addClass('hidden-by-filter');
+                        }
+                    });
+                } else {
+                    btn.removeClass('active');
+                    btn.html('<span class="glyphicon glyphicon-filter"></span> Show SHACL Only');
+                    
+                    // Show all nodes again
+                    $('.node-card').removeClass('hidden-by-filter');
+                }
+            });
+            
+            // Search functionality
+            $('#search-input').on('input', function() {
+                const searchTerm = $(this).val().toLowerCase();
+                
+                if (searchTerm === '') {
+                    // Show all
+                    $('.node-card').removeClass('hidden-by-search');
+                    $('.search-highlight').contents().unwrap();
+                } else {
+                    // Filter nodes and properties
+                    $('.node-card').each(function() {
+                        const card = $(this);
+                        const nodeId = card.find('.node-id').text().toLowerCase();
+                        const nodeType = card.find('.node-type').text().toLowerCase();
+                        const propertyTexts = card.find('.property-label, .property-path, .value-display').map(function() {
+                            return $(this).text().toLowerCase();
+                        }).get().join(' ');
+                        
+                        const matches = nodeId.includes(searchTerm) || 
+                                      nodeType.includes(searchTerm) ||
+                                      propertyTexts.includes(searchTerm);
+                        
+                        if (matches) {
+                            card.removeClass('hidden-by-search').removeClass('collapsed');
+                            highlightText(card, searchTerm);
+                        } else {
+                            card.addClass('hidden-by-search');
+                        }
+                    });
+                }
+            });
+        }
+        
+        function highlightText(element, searchTerm) {
+            // Remove previous highlights
+            element.find('.search-highlight').contents().unwrap();
+            
+            // Highlight matching text
+            element.find('.property-label, .property-path, .value-display, .node-id').each(function() {
+                const $this = $(this);
+                const text = $this.text();
+                const lowerText = text.toLowerCase();
+                const index = lowerText.indexOf(searchTerm);
+                
+                if (index >= 0) {
+                    const before = text.substring(0, index);
+                    const match = text.substring(index, index + searchTerm.length);
+                    const after = text.substring(index + searchTerm.length);
+                    
+                    $this.html(
+                        document.createTextNode(before).textContent +
+                        '<span class="search-highlight">' + document.createTextNode(match).textContent + '</span>' +
+                        document.createTextNode(after).textContent
+                    );
+                }
+            });
+        }
+
+        function updateSaveButton() {
+            const hasChanges = $('.property-row.changed').length > 0;
+            $('#save-btn').prop('disabled', !hasChanges);
+        }
+
+        function saveChanges() {
+            // Collect all changes from the form
+            const updatedGraph = [];
+            
+            $('.node-card').each(function() {
+                const nodeId = $(this).find('.node-id').text();
+                const nodeTypes = [];
+                $(this).find('.node-type').each(function() {
+                    nodeTypes.push($(this).text());
+                });
+                
+                const node = {
+                    '@id': nodeId,
+                    '@type': nodeTypes.length === 1 ? nodeTypes[0] : nodeTypes
+                };
+                
+                // Collect properties
+                $(this).find('.property-row').each(function() {
+                    const key = $(this).attr('data-property');
+                    const inputs = $(this).find('input, textarea');
+                    
+                    if (inputs.length === 1) {
+                        // Single value
+                        let val = inputs.val();
+                        try {
+                            val = JSON.parse(val);
+                        } catch (e) {
+                            // Keep as string
+                        }
+                        node[key] = val;
+                    } else {
+                        // Array of values
+                        const values = [];
+                        inputs.each(function() {
+                            let val = $(this).val();
+                            try {
+                                val = JSON.parse(val);
+                            } catch (e) {
+                                // Keep as string
+                            }
+                            values.push(val);
+                        });
+                        node[key] = values;
+                    }
+                });
+                
+                updatedGraph.push(node);
+            });
+            
+            jsonData['@graph'] = updatedGraph;
+            
+            // Check if we can save to Dataverse
+            if (fileId && siteUrl) {
+                saveToDataverse();
+            } else {
+                // Test mode: just download
+                alert('Test mode: Changes saved locally. Click "Export JSON-LD" to download.');
+                $('.property-row').removeClass('changed');
+                updateSaveButton();
+            }
+        }
+        
+        async function saveToDataverse() {
+            const apiToken = prompt('Enter your Dataverse API token to save changes:');
+            
+            if (!apiToken) {
+                alert('Save cancelled: API token required');
+                return;
+            }
+            
+            try {
+                // Prepare the data as JSON-LD string
+                const jsonldString = JSON.stringify(jsonData, null, 2);
+                const blob = new Blob([jsonldString], { type: 'application/ld+json' });
+                
+                // Create form data
+                const formData = new FormData();
+                formData.append('file', blob, 'cdi-metadata.jsonld');
+                formData.append('jsonData', JSON.stringify({
+                    description: 'Updated CDI metadata',
+                    categories: ['Data'],
+                    forceReplace: true
+                }));
+                
+                // Call Dataverse API to replace file
+                const response = await fetch(`${siteUrl}/api/files/${fileId}/replace`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Dataverse-key': apiToken
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`API error: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.status === 'OK') {
+                    alert('✓ Successfully saved to Dataverse!');
+                    $('.property-row').removeClass('changed');
+                    updateSaveButton();
+                    
+                    // Reload the page to show updated data
+                    if (confirm('Reload page to see updated data?')) {
+                        location.reload();
+                    }
+                } else {
+                    throw new Error('Unexpected response: ' + JSON.stringify(result));
+                }
+                
+            } catch (error) {
+                console.error('Save error:', error);
+                alert('✗ Failed to save to Dataverse:\n' + error.message + '\n\nData has been saved locally. Use "Export JSON-LD" to download.');
+            }
+        }
+
+        async function validateData() {
+            $('#validation-status').html('<span class="label label-info">Validating...</span>');
+            
+            try {
+                // Convert JSON-LD to N3 Store using jsonld library
+                const dataStore = new N3.Store();
+                
+                // Create a local copy without @context
+                const dataForValidation = JSON.parse(JSON.stringify(jsonData));
+                
+                // Remove @context to avoid remote fetching - we'll use local namespace mapping
+                if (dataForValidation['@context']) {
+                    delete dataForValidation['@context'];
+                }
+                
+                // Add a minimal local context for basic processing
+                dataForValidation['@context'] = {
+                    "@vocab": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/"
+                };
+                
+                // Custom document loader that prevents remote fetching
+                const documentLoader = jsonld.documentLoaders.xhr();
+                const customLoader = async (url) => {
+                    console.log('Skipping remote context fetch:', url);
+                    // Return empty context for any remote URLs
+                    return {
+                        contextUrl: null,
+                        document: { "@context": {} },
+                        documentUrl: url
+                    };
+                };
+                
+                // Expand with custom loader
+                const expanded = await jsonld.expand(dataForValidation, {
+                    documentLoader: customLoader
+                });
+                
+                // Convert expanded JSON-LD to N-Quads
+                const nquads = await jsonld.toRDF(expanded, {
+                    format: 'application/n-quads',
+                    documentLoader: customLoader
+                });
+                
+
+                
+                // Parse the N-Quads into the store
+                const parser = new N3.Parser({ format: 'N-Quads' });
+                
+                parser.parse(nquads, (error, quad, prefixes) => {
+                    if (error) {
+                        console.error('Parse error:', error);
+                        $('#validation-status').html(
+                            '<span class="validation-badge invalid">Parse Error: ' + error.message + '</span>'
+                        );
+                        return;
+                    }
+                    
+                    if (quad) {
+                        dataStore.addQuad(quad);
+                    } else {
+                        // Parsing complete, run validation
+
+                        runShaclValidation(dataStore);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Validation error:', error);
+                $('#validation-status').html(
+                    '<span class="validation-badge invalid">Validation Error: ' + error.message + '</span>'
+                );
+            }
+        }
+        
+        async function runShaclValidation(dataStore) {
+            try {
+
+                
+                // Simple SHACL validation - check required properties and cardinality
+                const violations = [];
+                const warnings = [];
+                
+                // Get all node shapes
+                const nodeShapes = shaclShapesStore.getSubjects(
+                    N3.DataFactory.namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'),
+                    N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#NodeShape'),
+                    null
+                );
+                
+                // For each node in data, check against its shape
+                for (const node of jsonData['@graph'] || []) {
+                    const nodeId = N3.DataFactory.namedNode(node['@id']);
+                    const nodeType = node['@type'];
+                    
+                    if (!nodeType) continue;
+                    
+                    // Find matching shape by target class
+                    const targetClassPred = N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#targetClass');
+                    const nodeTypeTerm = N3.DataFactory.namedNode(nodeType);
+                    
+                    for (const shape of nodeShapes) {
+                        const targetClasses = shaclShapesStore.getObjects(shape, targetClassPred, null);
+                        
+                        if (targetClasses.some(tc => tc.equals(nodeTypeTerm))) {
+                            // Check properties for this shape
+                            const propertyPred = N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#property');
+                            const propertyShapes = shaclShapesStore.getObjects(shape, propertyPred, null);
+                            
+                            for (const propShape of propertyShapes) {
+                                const path = shaclShapesStore.getObjects(propShape, N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#path'), null)[0];
+                                const minCount = shaclShapesStore.getObjects(propShape, N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#minCount'), null)[0];
+                                const maxCount = shaclShapesStore.getObjects(propShape, N3.DataFactory.namedNode('http://www.w3.org/ns/shacl#maxCount'), null)[0];
+                                
+                                if (path && minCount) {
+                                    const pathStr = path.value.split('/').pop().split('#').pop();
+                                    const minCountVal = parseInt(minCount.value);
+                                    const actualCount = node[pathStr] ? (Array.isArray(node[pathStr]) ? node[pathStr].length : 1) : 0;
+                                    
+                                    if (actualCount < minCountVal) {
+                                        violations.push({
+                                            focusNode: node['@id'],
+                                            path: pathStr,
+                                            message: `Required property '${pathStr}' is missing (minCount: ${minCountVal}, actual: ${actualCount})`
+                                        });
+                                    }
+                                }
+                                
+                                if (path && maxCount) {
+                                    const pathStr = path.value.split('/').pop().split('#').pop();
+                                    const maxCountVal = parseInt(maxCount.value);
+                                    const actualCount = node[pathStr] ? (Array.isArray(node[pathStr]) ? node[pathStr].length : 1) : 0;
+                                    
+                                    if (actualCount > maxCountVal) {
+                                        violations.push({
+                                            focusNode: node['@id'],
+                                            path: pathStr,
+                                            message: `Property '${pathStr}' exceeds maxCount (maxCount: ${maxCountVal}, actual: ${actualCount})`
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                const report = {
+                    conforms: violations.length === 0,
+                    results: violations
+                };
+                
+                validationReport = report;
+                
+
+                
+                // Update UI
+                if (report.conforms) {
+                    $('#validation-status').html(
+                        '<span class="validation-badge valid">' +
+                        '<span class="glyphicon glyphicon-ok-circle"></span> Valid' +
+                        '</span>'
+                    );
+                } else {
+                    $('#validation-status').html(
+                        '<span class="validation-badge invalid">' +
+                        '<span class="glyphicon glyphicon-exclamation-sign"></span> ' +
+                        violations.length + ' violation(s)' +
+                        '</span>'
+                    );
+                }
+                
+                // Update property rows with validation results
+                updatePropertyValidation(violations);
+                
+            } catch (error) {
+                console.error('SHACL validation error:', error);
+                $('#validation-status').html(
+                    '<span class="validation-badge invalid">Validation Engine Error: ' + error.message + '</span>'
+                );
+            }
+        }
+        
+        function updatePropertyValidation(violations) {
+            // Clear previous validation states
+            $('.property-row').removeClass('invalid').find('.validation-message').remove();
+            
+            // Group violations by focus node and path
+            violations.forEach(violation => {
+                if (violation.focusNode && violation.path) {
+                    const nodeId = violation.focusNode;
+                    const path = violation.path;
+                    
+                    // Find matching property row
+                    const propertyRow = $(`.property-row[data-node-id="${nodeId}"][data-property="${path}"]`);
+                    
+                    if (propertyRow.length > 0) {
+                        propertyRow.addClass('invalid');
+                        
+                        // Add validation message
+                        const message = violation.message || 'Validation failed';
+                        const msgDiv = $('<div>').addClass('validation-message').text(message);
+                        propertyRow.append(msgDiv);
+                    }
+                }
+            });
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(jsonData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/ld+json' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cdi-data.jsonld';
+            a.click();
+            
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
 </html>
