@@ -2129,9 +2129,6 @@
                 if (result.status === 'OK') {
                     $('.property-row').removeClass('changed');
                     updateSaveButton();
-                    
-                    // Reload the page to show updated data
-                    location.reload();
                 } else {
                     throw new Error('Unexpected response: ' + JSON.stringify(result));
                 }
