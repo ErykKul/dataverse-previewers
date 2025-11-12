@@ -463,6 +463,26 @@
         .hidden {
             display: none;
         }
+        
+        /* Spinning animation for save button */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .spinning {
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        /* Modal styling */
+        .modal-body ul {
+            padding-left: 20px;
+        }
+        
+        .modal-body ul li {
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -525,7 +545,54 @@
 
     <div id="content"></div>
 
+    <!-- Save to Dataverse Modal -->
+    <div class="modal fade" id="saveModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <h4 class="modal-title">
+                        <span class="glyphicon glyphicon-floppy-disk"></span>
+                        Save Changes to Dataverse
+                    </h4>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <span class="glyphicon glyphicon-info-sign"></span>
+                        <strong>Important Information:</strong>
+                    </div>
+                    <ul style="margin-top: 10px;">
+                        <li><strong>Write access required:</strong> Only users with write permissions on this dataset can save changes.</li>
+                        <li><strong>Draft version:</strong> If the dataset is published, saving will create a new draft version (if one doesn't exist yet).</li>
+                        <li><strong>Publication required:</strong> The dataset must be published for changes to be visible publicly to all users.</li>
+                        <li><strong>File replacement:</strong> This will replace the existing metadata file in the dataset.</li>
+                    </ul>
+                    
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label for="apiTokenInput">
+                            <strong>Dataverse API Token:</strong>
+                            <a href="https://guides.dataverse.org/en/latest/user/account.html#api-token" target="_blank" style="font-size: 0.9em;">
+                                <span class="glyphicon glyphicon-question-sign"></span> How to get your token
+                            </a>
+                        </label>
+                        <input type="password" class="form-control" id="apiTokenInput" placeholder="Enter your Dataverse API token">
+                        <small class="help-block">Your API token is kept secure and is not stored.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmSaveBtn">
+                        <span class="glyphicon glyphicon-floppy-disk"></span> Save to Dataverse
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/n3/browser/n3.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsonld/dist/jsonld.min.js"></script>
     <script>
@@ -1772,6 +1839,19 @@
                 }, 500);
             });
             
+            // Confirm save button in modal
+            $('#confirmSaveBtn').click(function() {
+                saveToDataverse();
+            });
+            
+            // Allow Enter key in API token input to trigger save
+            $('#apiTokenInput').keypress(function(e) {
+                if (e.which === 13) { // Enter key
+                    e.preventDefault();
+                    saveToDataverse();
+                }
+            });
+            
             // Validate
             $('#validate-btn').click(function() {
                 validateData();
@@ -1881,37 +1961,48 @@
             $('#save-btn').prop('disabled', !hasChanges);
         }
 
-        function saveChanges() {
-            // Collect all changes from the form
+        function collectChangesFromDOM() {
+            // Only update jsonData if we're in edit mode and have actual changes
+            if (!isEditMode) {
+                return; // Don't modify data in view mode
+            }
+            
+            // Check if there are any actual changes
+            const hasChanges = $('.property-row.changed').length > 0;
+            if (!hasChanges) {
+                return; // No changes, keep original jsonData unchanged
+            }
+            
+            // Collect all changes from the form and update jsonData
             const updatedGraph = [];
             
             $('.node-card').each(function() {
                 const nodeId = $(this).find('.node-id').text();
-                const nodeTypes = [];
-                $(this).find('.node-type').each(function() {
-                    nodeTypes.push($(this).text());
-                });
                 
-                const node = {
-                    '@id': nodeId,
-                    '@type': nodeTypes.length === 1 ? nodeTypes[0] : nodeTypes
-                };
+                // Find original node in jsonData to preserve structure
+                const originalNode = jsonData['@graph'].find(n => n['@id'] === nodeId);
+                if (!originalNode) return; // Skip if not found
                 
-                // Collect properties
-                $(this).find('.property-row').each(function() {
+                // Start with a copy of the original node to preserve all properties
+                const node = JSON.parse(JSON.stringify(originalNode));
+                
+                // Only update properties that have changed
+                $(this).find('.property-row.changed').each(function() {
                     const key = $(this).attr('data-property');
                     const inputs = $(this).find('input, textarea');
                     
                     if (inputs.length === 1) {
                         // Single value
-                        let val = inputs.val();
+                        const input = inputs.eq(0);
+                        let val = input.val();
+                        
                         try {
                             val = JSON.parse(val);
                         } catch (e) {
-                            // Keep as string
+                            // Keep as string if not valid JSON
                         }
                         node[key] = val;
-                    } else {
+                    } else if (inputs.length > 1) {
                         // Array of values
                         const values = [];
                         inputs.each(function() {
@@ -1931,10 +2022,17 @@
             });
             
             jsonData['@graph'] = updatedGraph;
+        }
+        
+        function saveChanges() {
+            // First, collect any changes from the DOM
+            collectChangesFromDOM();
             
             // Check if we can save to Dataverse
             if (fileId && siteUrl) {
-                saveToDataverse();
+                // Show the save dialog
+                $('#apiTokenInput').val('');
+                $('#saveModal').modal('show');
             } else {
                 // Test mode: just download
                 alert('Test mode: Changes saved locally. Click "Export JSON-LD" to download.');
@@ -1944,17 +2042,23 @@
         }
         
         async function saveToDataverse() {
-            const apiToken = prompt('Enter your Dataverse API token to save changes:');
+            const apiToken = $('#apiTokenInput').val().trim();
             
             if (!apiToken) {
-                alert('Save cancelled: API token required');
+                alert('Please enter your API token.');
                 return;
             }
+            
+            // Close the modal and show loading
+            $('#saveModal').modal('hide');
             
             try {
                 // Prepare the data as JSON-LD string
                 const jsonldString = JSON.stringify(jsonData, null, 2);
-                const blob = new Blob([jsonldString], { type: 'application/ld+json' });
+                
+                // Use the correct MIME type with profile
+                const mimeType = 'application/ld+json; profile="http://ddialliance.org/Specification/DDI-CDI/1.0/DDI-CDI.jsonld"';
+                const blob = new Blob([jsonldString], { type: mimeType });
                 
                 // Create form data
                 const formData = new FormData();
@@ -1964,6 +2068,9 @@
                     categories: ['Data'],
                     forceReplace: true
                 }));
+                
+                // Show saving indicator
+                $('#save-btn').prop('disabled', true).html('<span class="glyphicon glyphicon-refresh spinning"></span> Saving...');
                 
                 // Call Dataverse API to replace file
                 const response = await fetch(`${siteUrl}/api/files/${fileId}/replace`, {
@@ -1982,7 +2089,7 @@
                 const result = await response.json();
                 
                 if (result.status === 'OK') {
-                    alert('✓ Successfully saved to Dataverse!');
+                    alert('✓ Successfully saved to Dataverse!\n\nA new draft version has been created. You can continue editing or publish the dataset to make changes visible to all users.');
                     $('.property-row').removeClass('changed');
                     updateSaveButton();
                     
@@ -1996,7 +2103,10 @@
                 
             } catch (error) {
                 console.error('Save error:', error);
-                alert('✗ Failed to save to Dataverse:\n' + error.message + '\n\nData has been saved locally. Use "Export JSON-LD" to download.');
+                alert('✗ Failed to save to Dataverse:\n' + error.message + '\n\nPlease check:\n- Your API token is valid\n- You have write access to this dataset\n- The dataset is accessible');
+            } finally {
+                // Reset button
+                $('#save-btn').prop('disabled', false).html('<span class="glyphicon glyphicon-floppy-disk"></span> Save Changes');
             }
         }
 
@@ -2207,6 +2317,9 @@
         }
 
         function exportData() {
+            // Collect any changes from DOM before exporting
+            collectChangesFromDOM();
+            
             const dataStr = JSON.stringify(jsonData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/ld+json' });
             const url = URL.createObjectURL(blob);
