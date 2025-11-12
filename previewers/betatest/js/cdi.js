@@ -210,18 +210,47 @@ async function renderWithShaclForm(jsonData) {
     
     // FIX: Replace unreachable @context URL with inline context
     // The original Bitbucket URL causes CORS errors
-    if (jsonData['@context'] && typeof jsonData['@context'] === 'string') {
-        if (jsonData['@context'].includes('bitbucket.io')) {
-            console.log('[CDI Previewer] Replacing unreachable @context URL with inline context');
-            // Use a minimal inline context to make the data parseable
-            jsonData['@context'] = {
-                "@vocab": "https://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
-                "schema": "http://schema.org/",
-                "name": "schema:name",
-                "description": "schema:description"
-            };
-            valuesString = JSON.stringify(jsonData);
+    const inlineContext = {
+        "@vocab": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
+        "schema": "http://schema.org/",
+        "dcterms": "http://purl.org/dc/terms/",
+        "xsd": "http://www.w3.org/2001/XMLSchema#",
+        "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+        "skos": "http://www.w3.org/2004/02/skos/core#",
+        "time": "http://www.w3.org/2006/time#",
+        "spdx": "http://spdx.org/rdf/terms#",
+        "prov": "http://www.w3.org/ns/prov#",
+        "geosparql": "http://www.opengis.net/ont/geosparql#",
+        // Ensure CDI dataset types are properly namespaced
+        "WideDataSet": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/WideDataSet",
+        "LongDataSet": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/LongDataSet",
+        "DimensionalDataSet": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/DimensionalDataSet",
+        "PhysicalDataSet": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/PhysicalDataSet"
+    };
+    
+    let needsContextReplacement = false;
+    
+    if (jsonData['@context']) {
+        if (typeof jsonData['@context'] === 'string' && jsonData['@context'].includes('bitbucket.io')) {
+            needsContextReplacement = true;
+        } else if (Array.isArray(jsonData['@context'])) {
+            needsContextReplacement = jsonData['@context'].some(c => 
+                typeof c === 'string' && c.includes('bitbucket.io')
+            );
         }
+    }
+    
+    if (needsContextReplacement) {
+        console.log('[CDI Previewer] Replacing unreachable @context URL with comprehensive inline context');
+        if (Array.isArray(jsonData['@context'])) {
+            // Replace bitbucket URLs but keep other context objects
+            jsonData['@context'] = jsonData['@context'].map(c => 
+                (typeof c === 'string' && c.includes('bitbucket.io')) ? inlineContext : c
+            );
+        } else {
+            jsonData['@context'] = inlineContext;
+        }
+        valuesString = JSON.stringify(jsonData, null, 2);
     }
     
     // Set attributes on the shacl-form element (start in view mode)

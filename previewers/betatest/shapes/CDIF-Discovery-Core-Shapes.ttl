@@ -8,7 +8,13 @@
 @prefix spdx: <http://spdx.org/rdf/terms#>.
 
 cdifd:CDIFDatasetRecommendedShape a sh:NodeShape ;
-# only apply to elements that are child of root dataset
+# Explicit targetClass statements for type-based shape discovery
+# These allow shacl-form to find the shape when data-values-subject is set
+	sh:targetClass schema:Dataset ;
+	sh:targetClass <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/WideDataSet> ;
+	sh:targetClass <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/LongDataSet> ;
+	sh:targetClass <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/DimensionalDataSet> ;
+# SPARQL target for validation - matches root datasets (no incoming references except schema:about)
 	sh:target [
 	  a sh:SPARQLTarget ;
 	  sh:prefixes (
