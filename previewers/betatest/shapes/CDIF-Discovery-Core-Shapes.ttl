@@ -2,10 +2,10 @@
 @prefix schema: <http://schema.org/> .
 @prefix cdifd: <https://cdif.org/validation/0.1/shacl#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix dcterms: <http://purl.org/dc/terms/> .
-@prefix time: <http://www.w3.org/2006/time#> .
-@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
-@prefix spdx: <http://spdx.org/rdf/terms#> .
+@prefix dcterms: <http://purl.org/dc/terms/>.
+@prefix time: <http://www.w3.org/2006/time#>.
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix spdx: <http://spdx.org/rdf/terms#>.
 
 cdifd:CDIFDatasetRecommendedShape a sh:NodeShape ;
 # only apply to elements that are child of root dataset
