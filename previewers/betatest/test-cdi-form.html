@@ -225,17 +225,17 @@
                             log(`sh:property quads for shape: ${propertyQuads.length}`, propertyQuads.length > 0 ? 'success' : 'error');
                             
                             // Check total quads in shapes graph
-                            const shapesGraphQuads = store.getQuads(null, null, null, 'https://shapes');
-                            log(`Total quads in shapes graph: ${shapesGraphQuads.length}`, 'info');
+                            const shapesGraphQuads = store.getQuads(null, null, null, 'loaded-shapes');
+                            log(`Total quads in shapes graph (loaded-shapes): ${shapesGraphQuads.length}`, 'info');
                             
                             // Check total quads in data graph
-                            const dataGraphQuads = store.getQuads(null, null, null, 'https://data');
-                            log(`Total quads in data graph: ${dataGraphQuads.length}`, 'info');
+                            const dataGraphQuads = store.getQuads(null, null, null, 'loaded-data');
+                            log(`Total quads in data graph (loaded-data): ${dataGraphQuads.length}`, 'info');
                             
                             // Check if values subject has rdf:type
                             const valuesSubject = resolvedId;
-                            const typeQuads = store.getQuads(valuesSubject, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', null, 'https://data');
-                            log(`rdf:type quads for values subject: ${typeQuads.length}`, typeQuads.length > 0 ? 'success' : 'error');
+                            const typeQuads = store.getQuads(valuesSubject, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', null, 'loaded-data');
+                            log(`rdf:type quads for values subject in loaded-data: ${typeQuads.length}`, typeQuads.length > 0 ? 'success' : 'error');
                             if (typeQuads.length > 0) {
                                 typeQuads.forEach(q => {
                                     log(`  Type: ${q.object.value}`, 'info');
