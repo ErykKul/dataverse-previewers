@@ -176,6 +176,7 @@
                 // Intercept console
                 const originalWarn = console.warn;
                 const originalError = console.error;
+                const originalInfo = console.info;
                 console.warn = function(...args) {
                     log(`WARN: ${args.join(' ')}`, 'error');
                     originalWarn.apply(console, args);
@@ -183,6 +184,10 @@
                 console.error = function(...args) {
                     log(`ERROR: ${args.join(' ')}`, 'error');
                     originalError.apply(console, args);
+                };
+                console.info = function(...args) {
+                    log(`INFO: ${args.join(' ')}`, 'info');
+                    originalInfo.apply(console, args);
                 };
 
                 // Append to DOM
@@ -205,11 +210,22 @@
                         // Check for shacl-property elements
                         const properties = shaclFormElement.shadowRoot.querySelectorAll('shacl-property');
                         const groups = shaclFormElement.shadowRoot.querySelectorAll('.shacl-group');
+                        const nodes = shaclFormElement.shadowRoot.querySelectorAll('shacl-node');
                         log(`Found ${properties.length} shacl-property elements`, properties.length > 0 ? 'success' : 'error');
                         log(`Found ${groups.length} .shacl-group elements`, groups.length > 0 ? 'success' : 'error');
+                        log(`Found ${nodes.length} shacl-node elements`, 'info');
+                        
+                        // Log details about the shacl-node
+                        if (nodes.length > 0) {
+                            const node = nodes[0];
+                            log(`shacl-node data-node-id: ${node.getAttribute('data-node-id')}`, 'info');
+                            log(`shacl-node innerHTML: ${node.innerHTML?.substring(0, 200)}`, 'info');
+                            log(`shacl-node children count: ${node.children.length}`, 'info');
+                        }
                         
                         if (properties.length === 0 && groups.length === 0) {
                             log('FORM IS EMPTY - NO CONTENT RENDERED', 'error');
+                            log('This suggests the shape is found but properties are not being added', 'error');
                         }
                     } else {
                         log('ERROR: No shadowRoot found', 'error');
