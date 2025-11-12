@@ -627,11 +627,9 @@
                     const paramsData = await paramsResponse.json();
                     
                     // Extract parameters from the response
-                    const queryParams = paramsData.data.queryParameters || [];
-                    queryParams.forEach(param => {
-                        if (param.fileid) fileId = param.fileid;
-                        if (param.siteUrl) siteUrl = param.siteUrl;
-                    });
+                    const queryParams = paramsData.data.queryParameters || {};
+                    fileId = queryParams.fileid;
+                    siteUrl = queryParams.siteUrl;
                 } else {
                     // Direct parameters (for testing)
                     fileId = urlParams.get('fileid');
