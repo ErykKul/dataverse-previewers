@@ -205,8 +205,8 @@ async function renderWithShaclForm(jsonData, fileUrl) {
     // Create the shacl-form element
     shaclFormElement = document.createElement('shacl-form');
     
-    // Convert JSON-LD to a string
-    const valuesString = JSON.stringify(jsonData, null, 2);
+    // Convert JSON-LD to a string (will be updated if context replacement is needed)
+    let valuesString = JSON.stringify(jsonData, null, 2);
     
     // FIX: Replace unreachable @context URL with inline context
     // The original Bitbucket URL causes CORS errors
