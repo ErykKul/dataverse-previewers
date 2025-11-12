@@ -1881,37 +1881,48 @@
             $('#save-btn').prop('disabled', !hasChanges);
         }
 
-        function saveChanges() {
-            // Collect all changes from the form
+        function collectChangesFromDOM() {
+            // Only update jsonData if we're in edit mode and have actual changes
+            if (!isEditMode) {
+                return; // Don't modify data in view mode
+            }
+            
+            // Check if there are any actual changes
+            const hasChanges = $('.property-row.changed').length > 0;
+            if (!hasChanges) {
+                return; // No changes, keep original jsonData unchanged
+            }
+            
+            // Collect all changes from the form and update jsonData
             const updatedGraph = [];
             
             $('.node-card').each(function() {
                 const nodeId = $(this).find('.node-id').text();
-                const nodeTypes = [];
-                $(this).find('.node-type').each(function() {
-                    nodeTypes.push($(this).text());
-                });
                 
-                const node = {
-                    '@id': nodeId,
-                    '@type': nodeTypes.length === 1 ? nodeTypes[0] : nodeTypes
-                };
+                // Find original node in jsonData to preserve structure
+                const originalNode = jsonData['@graph'].find(n => n['@id'] === nodeId);
+                if (!originalNode) return; // Skip if not found
                 
-                // Collect properties
-                $(this).find('.property-row').each(function() {
+                // Start with a copy of the original node to preserve all properties
+                const node = JSON.parse(JSON.stringify(originalNode));
+                
+                // Only update properties that have changed
+                $(this).find('.property-row.changed').each(function() {
                     const key = $(this).attr('data-property');
                     const inputs = $(this).find('input, textarea');
                     
                     if (inputs.length === 1) {
                         // Single value
-                        let val = inputs.val();
+                        const input = inputs.eq(0);
+                        let val = input.val();
+                        
                         try {
                             val = JSON.parse(val);
                         } catch (e) {
-                            // Keep as string
+                            // Keep as string if not valid JSON
                         }
                         node[key] = val;
-                    } else {
+                    } else if (inputs.length > 1) {
                         // Array of values
                         const values = [];
                         inputs.each(function() {
@@ -1931,6 +1942,11 @@
             });
             
             jsonData['@graph'] = updatedGraph;
+        }
+        
+        function saveChanges() {
+            // First, collect any changes from the DOM
+            collectChangesFromDOM();
             
             // Check if we can save to Dataverse
             if (fileId && siteUrl) {
@@ -2207,6 +2223,9 @@
         }
 
         function exportData() {
+            // Collect any changes from DOM before exporting
+            collectChangesFromDOM();
+            
             const dataStr = JSON.stringify(jsonData, null, 2);
             const blob = new Blob([dataStr], { type: 'application/ld+json' });
             const url = URL.createObjectURL(blob);
