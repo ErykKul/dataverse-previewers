@@ -604,6 +604,7 @@
         let validationReport = null;
         let fileId = null;
         let siteUrl = null;
+        let originalFileName = 'cdi-metadata.jsonld'; // Default filename
         let expandedJsonLd = null; // Store expanded JSON-LD for property URI lookup
 
         // Initialize
@@ -612,6 +613,7 @@
                 // Get file URL from query parameters
                 const urlParams = new URLSearchParams(window.location.search);
                 let fileUrl;
+                let datasetMetadataUrl = null;
                 
                 // Check if we have a callback parameter (external tool invocation)
                 const callbackParam = urlParams.get('callback');
@@ -630,6 +632,13 @@
                     const queryParams = paramsData.data.queryParameters || {};
                     fileId = queryParams.fileid;
                     siteUrl = queryParams.siteUrl;
+                    
+                    // Get the dataset metadata signed URL if available
+                    const signedUrls = paramsData.data.signedUrls || [];
+                    const metadataUrlObj = signedUrls.find(u => u.name === 'getDatasetVersionMetadata');
+                    if (metadataUrlObj) {
+                        datasetMetadataUrl = metadataUrlObj.signedUrl;
+                    }
                 } else {
                     // Direct parameters (for testing)
                     fileId = urlParams.get('fileid');
@@ -639,6 +648,34 @@
                 // Check required parameters
                 if (!fileId || !siteUrl) {
                     throw new Error('Missing required parameters: fileid and siteUrl must be provided');
+                }
+                
+                // Try to get the original filename from dataset metadata
+                try {
+                    if (datasetMetadataUrl) {
+                        // Use signed URL from callback
+                        const metadataResponse = await fetch(datasetMetadataUrl);
+                        if (metadataResponse.ok) {
+                            const metadata = await metadataResponse.json();
+                            // Find the file in the files array by matching fileId
+                            const files = metadata.data.files || [];
+                            const fileInfo = files.find(f => f.dataFile && f.dataFile.id == fileId);
+                            if (fileInfo && fileInfo.dataFile && fileInfo.dataFile.filename) {
+                                originalFileName = fileInfo.dataFile.filename;
+                            }
+                        }
+                    } else {
+                        // Fallback: try direct file API
+                        const metadataResponse = await fetch(`${siteUrl}/api/files/${fileId}`);
+                        if (metadataResponse.ok) {
+                            const metadata = await metadataResponse.json();
+                            if (metadata.data && metadata.data.dataFile && metadata.data.dataFile.filename) {
+                                originalFileName = metadata.data.dataFile.filename;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch filename, using default:', e);
                 }
                 
                 // Load from Dataverse API
@@ -2062,7 +2099,7 @@
                 
                 // Create form data
                 const formData = new FormData();
-                formData.append('file', blob, 'cdi-metadata.jsonld');
+                formData.append('file', blob, originalFileName);
                 formData.append('jsonData', JSON.stringify({
                     description: 'Updated CDI metadata',
                     categories: ['Data'],
@@ -2090,14 +2127,8 @@
                 const result = await response.json();
                 
                 if (result.status === 'OK') {
-                    alert('✓ Successfully saved to Dataverse!\n\nA new draft version has been created. You can continue editing or publish the dataset to make changes visible to all users.');
                     $('.property-row').removeClass('changed');
                     updateSaveButton();
-                    
-                    // Reload the page to show updated data
-                    if (confirm('Reload page to see updated data?')) {
-                        location.reload();
-                    }
                 } else {
                     throw new Error('Unexpected response: ' + JSON.stringify(result));
                 }
