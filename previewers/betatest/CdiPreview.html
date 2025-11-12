@@ -714,8 +714,11 @@
             // Mark this node as rendered
             renderedNodes.add(id);
             
-            // Use consistent small increment per depth level (8px per level)
-            const card = $('<div>').addClass('node-card tree-node').attr('data-node-id', id).css('margin-left', `${depth * 8}px`);
+            // Only indent depth > 0 with a constant 8px (not cumulative since nodes are nested)
+            const card = $('<div>').addClass('node-card tree-node').attr('data-node-id', id);
+            if (depth > 0) {
+                card.css('margin-left', '8px');
+            }
             
             // Header with collapse functionality
             const header = $('<div>').addClass('node-header');
@@ -871,7 +874,7 @@
                             const refLink = $('<div>')
                                 .addClass('node-reference-link')
                                 .css({
-                                    'margin-left': `${(depth + 1) * 8}px`,
+                                    'margin-left': '8px',
                                     'padding': '3px',
                                     'margin-bottom': '2px'
                                 });
