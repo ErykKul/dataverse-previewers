@@ -353,6 +353,18 @@ async function renderWithShaclForm(jsonData, fileUrl) {
     console.log('[CDI Previewer] Values data length:', valuesString.length, 'characters');
     console.log('[CDI Previewer] ===== END DIAGNOSTIC INFO =====');
 
+    // Intercept console.warn and console.error to catch shacl-form internal messages
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    console.warn = function(...args) {
+        console.log('[CDI Previewer] INTERCEPTED WARN:', ...args);
+        originalWarn.apply(console, args);
+    };
+    console.error = function(...args) {
+        console.log('[CDI Previewer] INTERCEPTED ERROR:', ...args);
+        originalError.apply(console, args);
+    };
+
     // Listen for ALL events from shacl-form for debugging
     ['shacl-form-ready', 'shacl-validation-complete', 'error', 'load', 'change'].forEach(eventName => {
         shaclFormElement.addEventListener(eventName, (event) => {
