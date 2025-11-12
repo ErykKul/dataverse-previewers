@@ -24,7 +24,19 @@ cdifd:CDIFDatasetRecommendedShape a sh:NodeShape ;
       PREFIX schema: <http://schema.org/>
       SELECT DISTINCT ?this
         WHERE {
-          ?this a schema:Dataset .
+          # Match either schema:Dataset OR DDI-CDI dataset types
+          {
+            ?this a schema:Dataset .
+          } UNION {
+            ?this a ?type .
+            FILTER (
+              ?type = <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/WideDataSet> ||
+              ?type = <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/LongDataSet> ||
+              ?type = <http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/DimensionalDataSet> ||
+              CONTAINS(STR(?type), "DataSet")
+            )
+          }
+          # Only match root nodes (not referenced by other nodes)
           FILTER (
             NOT EXISTS { ?s ?p ?this . }
           )
