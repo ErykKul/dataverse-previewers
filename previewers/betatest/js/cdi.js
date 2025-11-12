@@ -265,6 +265,10 @@ async function renderWithShaclForm(jsonData, fileUrl) {
     shaclFormElement.setAttribute('data-collapse', 'open');
     shaclFormElement.setAttribute('data-language', locale || 'en');
     
+    console.log('[CDI Previewer] Set data-shapes attribute, length:', shapesData.length);
+    console.log('[CDI Previewer] Set data-values attribute, length:', valuesString.length);
+    console.log('[CDI Previewer] Attributes set on element:', shaclFormElement.getAttributeNames());
+    
     // Explicitly set the shape subject to avoid ambiguity when multiple root shapes exist
     shaclFormElement.setAttribute('data-shape-subject', 'https://cdif.org/validation/0.1/shacl#CDIFDatasetRecommendedShape');
     
@@ -398,9 +402,24 @@ async function renderWithShaclForm(jsonData, fileUrl) {
     formContainer.append(shaclFormElement);
     $('.preview').append(formContainer);
     
+    console.log('[CDI Previewer] Form element appended to DOM');
+    console.log('[CDI Previewer] Form element shadowRoot:', shaclFormElement.shadowRoot);
+    console.log('[CDI Previewer] Form element connected:', shaclFormElement.isConnected);
+    
     // Check after a delay if the form is empty
     setTimeout(() => {
+        console.log('[CDI Previewer] Checking form content after 2s delay...');
+        console.log('[CDI Previewer] shadowRoot exists:', !!shaclFormElement.shadowRoot);
+        if (shaclFormElement.shadowRoot) {
+            console.log('[CDI Previewer] shadowRoot innerHTML length:', shaclFormElement.shadowRoot.innerHTML?.length);
+            console.log('[CDI Previewer] shadowRoot children:', shaclFormElement.shadowRoot.children.length);
+            console.log('[CDI Previewer] First 500 chars of shadowRoot:', 
+                shaclFormElement.shadowRoot.innerHTML?.substring(0, 500));
+        }
+        
         const formContent = $(shaclFormElement).find('shacl-property, .shacl-group').length;
+        console.log('[CDI Previewer] Found shacl-property or .shacl-group elements:', formContent);
+        
         if (formContent === 0) {
             console.error('[CDI Previewer] Form appears empty - no properties rendered');
             $('.preview').append(
