@@ -1988,18 +1988,13 @@
                 return; // No changes, keep original jsonData unchanged
             }
             
-            // Collect all changes from the form and update jsonData
-            const updatedGraph = [];
-            
+            // Update only the changed properties in jsonData, preserve everything else
             $('.node-card').each(function() {
                 const nodeId = $(this).find('.node-id').text();
                 
-                // Find original node in jsonData to preserve structure
-                const originalNode = jsonData['@graph'].find(n => n['@id'] === nodeId);
-                if (!originalNode) return; // Skip if not found
-                
-                // Start with a copy of the original node to preserve all properties
-                const node = JSON.parse(JSON.stringify(originalNode));
+                // Find the node in jsonData
+                const node = jsonData['@graph'].find(n => n['@id'] === nodeId);
+                if (!node) return; // Skip if not found
                 
                 // Only update properties that have changed
                 $(this).find('.property-row.changed').each(function() {
@@ -2032,11 +2027,9 @@
                         node[key] = values;
                     }
                 });
-                
-                updatedGraph.push(node);
             });
             
-            jsonData['@graph'] = updatedGraph;
+            // jsonData['@graph'] is already updated in place - no need to replace it
         }
         
         function saveChanges() {
