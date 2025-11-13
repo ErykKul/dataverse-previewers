@@ -2107,7 +2107,8 @@
                 const jsonldString = JSON.stringify(jsonData, null, 2);
                 
                 // Use the exact MIME type that matches the external tool registration
-                const mimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
+                // Note: Dataverse's replace API strips spaces from MIME type parameters
+                const mimeType = 'application/ld+json;profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
                 const blob = new Blob([jsonldString], { type: mimeType });
                 
                 // Create form data
@@ -2366,7 +2367,8 @@
             
             const dataStr = JSON.stringify(jsonData, null, 2);
             // Use the exact MIME type that matches the external tool registration
-            const mimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
+            // Note: Dataverse's replace API strips spaces from MIME type parameters
+            const mimeType = 'application/ld+json;profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
             const blob = new Blob([dataStr], { type: mimeType });
             const url = URL.createObjectURL(blob);
             
