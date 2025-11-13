@@ -228,7 +228,8 @@
             const formData = new FormData();
             
             // Create a new Blob with the correct CDI MIME type (must match previewer registration exactly)
-            const cdiMimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
+            // Note: No space after semicolon - Dataverse's replace API strips spaces from MIME type parameters
+            const cdiMimeType = 'application/ld+json;profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
             const cdiBlob = new Blob([fileBlob], { type: cdiMimeType });
             formData.append('file', cdiBlob, filename);
             
