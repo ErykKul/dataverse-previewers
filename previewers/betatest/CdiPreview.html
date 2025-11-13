@@ -2016,32 +2016,43 @@
         function collectChangesFromDOM() {
             // Only update jsonData if we're in edit mode and have actual changes
             if (!isEditMode) {
+                console.log('collectChangesFromDOM: Not in edit mode, skipping');
                 return; // Don't modify data in view mode
             }
             
             // Check if there are any actual changes
             const hasChanges = $('.property-row.changed').length > 0;
+            console.log('collectChangesFromDOM: Found', hasChanges, 'changed rows');
             if (!hasChanges) {
                 return; // No changes, keep original jsonData unchanged
             }
             
             // Update only the changed properties in jsonData, preserve everything else
             $('.node-card').each(function() {
-                const nodeId = $(this).find('.node-id').text();
+                const $card = $(this);
+                const nodeId = $card.find('.node-id').first().text();
                 
                 // Find the node in jsonData
                 const node = jsonData['@graph'].find(n => n['@id'] === nodeId);
-                if (!node) return; // Skip if not found
+                if (!node) {
+                    console.warn('collectChangesFromDOM: Node not found:', nodeId);
+                    return; // Skip if not found
+                }
                 
-                // Only update properties that have changed
-                $(this).find('.property-row.changed').each(function() {
+                // Only update properties that have changed IN THIS NODE (not nested nodes)
+                // Use children().find() to get only direct properties, not nested node properties
+                $card.children('.node-body').find('.property-row.changed').each(function() {
                     const key = $(this).attr('data-property');
                     const inputs = $(this).find('input, textarea');
+                    
+                    console.log('collectChangesFromDOM: Updating', nodeId, key, 'with', inputs.length, 'inputs');
                     
                     if (inputs.length === 1) {
                         // Single value
                         const input = inputs.eq(0);
                         let val = input.val();
+                        
+                        console.log('collectChangesFromDOM: Old value:', node[key], '-> New value:', val);
                         
                         try {
                             val = JSON.parse(val);
@@ -2061,11 +2072,13 @@
                             }
                             values.push(val);
                         });
+                        console.log('collectChangesFromDOM: Old value:', node[key], '-> New value:', values);
                         node[key] = values;
                     }
                 });
             });
             
+            console.log('collectChangesFromDOM: Complete. Updated jsonData:', jsonData);
             // jsonData['@graph'] is already updated in place - no need to replace it
         }
         
