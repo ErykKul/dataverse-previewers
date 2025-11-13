@@ -2106,8 +2106,8 @@
                 // Prepare the data as JSON-LD string
                 const jsonldString = JSON.stringify(jsonData, null, 2);
                 
-                // Use the exact MIME type that matches the file registration
-                const mimeType = 'application/ld+json;profile="http://ddialliance.org/specification/ddi-cdi/1.0/ddi-cdi.jsonld"';
+                // Use the exact MIME type that matches the external tool registration
+                const mimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
                 const blob = new Blob([jsonldString], { type: mimeType });
                 
                 // Create form data
@@ -2366,8 +2366,8 @@
             collectChangesFromDOM();
             
             const dataStr = JSON.stringify(jsonData, null, 2);
-            // Use the exact MIME type that matches the file registration
-            const mimeType = 'application/ld+json;profile="http://ddialliance.org/specification/ddi-cdi/1.0/ddi-cdi.jsonld"';
+            // Use the exact MIME type that matches the external tool registration
+            const mimeType = 'application/ld+json; profile="http://www.w3.org/ns/json-ld#flattened http://www.w3.org/ns/json-ld#compacted https://ddialliance.org/specification/ddi-cdi/1.0"';
             const blob = new Blob([dataStr], { type: mimeType });
             const url = URL.createObjectURL(blob);
             
