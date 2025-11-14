@@ -741,12 +741,35 @@
             console.log('Data does not have @graph, normalizing...');
             hadOriginalGraph = false;
             
+            // Special handling for DDI-CDI format with DDICDIModels and @included
+            if (data['DDICDIModels'] && Array.isArray(data['DDICDIModels'])) {
+                console.log('Detected DDI-CDI format with DDICDIModels');
+                
+                // Combine DDICDIModels and @included into @graph
+                let graphNodes = [...data['DDICDIModels']];
+                
+                if (data['@included'] && Array.isArray(data['@included'])) {
+                    console.log('Also merging @included nodes');
+                    graphNodes = graphNodes.concat(data['@included']);
+                }
+                
+                console.log(`Combined ${graphNodes.length} nodes into @graph`);
+                
+                // Show notice to user
+                $('#normalization-notice').show();
+                
+                return {
+                    '@context': data['@context'] || {},
+                    '@graph': graphNodes
+                };
+            }
+            
             try {
                 // Use jsonld.flatten() to convert to @graph format
                 // This handles nested structures and extracts all nodes into a flat array
                 const flattened = await jsonld.flatten(data);
                 
-                console.log('Successfully normalized to @graph format');
+                console.log('Successfully normalized to @graph format using jsonld.flatten()');
                 console.log('Original format:', Object.keys(data));
                 console.log('Normalized format:', Object.keys(flattened));
                 console.log('Graph nodes:', flattened['@graph'] ? flattened['@graph'].length : 0);
