@@ -276,7 +276,7 @@
         }
         
         .btn {
-            margin-right: 5px;
+            margin-right: 2px;
             margin-bottom: 5px;
         }
         
@@ -1391,7 +1391,46 @@
             const valueStr = typeof value === 'object' ? JSON.stringify(value) : String(value);
             
             if (isEditMode) {
-                // Determine input type based on classification
+                // Check if this property has enumeration values (controlled vocabulary)
+                if (classification && classification.allowedValues && classification.allowedValues.length > 0) {
+                    // Create a dropdown select element
+                    const select = $('<select>')
+                        .addClass('form-control')
+                        .attr('data-original', valueStr);
+                    
+                    // Add empty option if field is not required
+                    if (!classification.isRequired) {
+                        select.append($('<option>').val('').text('-- Select --'));
+                    }
+                    
+                    // Add enumeration options
+                    classification.allowedValues.forEach(enumValue => {
+                        const option = $('<option>')
+                            .val(enumValue.uri)
+                            .text(enumValue.label);
+                        
+                        // Check if this is the current value (match by URI or local part)
+                        const valueUri = valueStr.startsWith('http') ? valueStr : null;
+                        const valueLocalPart = valueStr.split('/').pop().split('#').pop();
+                        const enumLocalPart = enumValue.uri.split('/').pop().split('#').pop();
+                        
+                        if (valueUri === enumValue.uri || valueLocalPart === enumLocalPart || valueStr === enumValue.label) {
+                            option.attr('selected', 'selected');
+                        }
+                        
+                        select.append(option);
+                    });
+                    
+                    // Mark as changed when selection changes
+                    select.on('change', function() {
+                        $(this).closest('.property-row').addClass('changed');
+                        updateSaveButton();
+                    });
+                    
+                    return select;
+                }
+                
+                // Not an enumeration - render regular input based on type
                 const inputType = classification ? classification.inputType : 'text';
                 
                 let input;
@@ -1410,6 +1449,7 @@
                 
                 return input;
             } else {
+                // View mode - show as read-only text
                 return $('<div>').addClass('value-display').text(valueStr);
             }
         }
@@ -1449,6 +1489,88 @@
             }
             
             return null;
+        }
+        
+        // Parse RDF list from sh:in to extract enumeration values
+        function parseRdfList(listNodeOrUri) {
+            if (!shaclShapesStore) return [];
+            
+            const values = [];
+            let currentNode = listNodeOrUri;
+            const nilUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#nil';
+            const firstUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#first';
+            const restUri = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#rest';
+            
+            // Handle both node objects and URI strings
+            if (typeof currentNode === 'string') {
+                currentNode = { value: currentNode };
+            }
+            
+            let iterations = 0;
+            const maxIterations = 100; // Safety limit
+            
+            while (currentNode && currentNode.value !== nilUri && iterations < maxIterations) {
+                iterations++;
+                
+                // Get rdf:first (the value at this position)
+                const firstQuads = shaclShapesStore.getQuads(
+                    currentNode,
+                    firstUri,
+                    null,
+                    null
+                );
+                
+                if (firstQuads.length > 0) {
+                    const valueUri = firstQuads[0].object.value;
+                    const label = extractLabelFromUri(valueUri);
+                    values.push({ 
+                        uri: valueUri, 
+                        label: label 
+                    });
+                }
+                
+                // Get rdf:rest (pointer to next node in list)
+                const restQuads = shaclShapesStore.getQuads(
+                    currentNode,
+                    restUri,
+                    null,
+                    null
+                );
+                
+                if (restQuads.length === 0) break;
+                currentNode = restQuads[0].object;
+            }
+            
+            return values;
+        }
+        
+        // Extract a readable label from a URI
+        function extractLabelFromUri(uri) {
+            // Extract the local part after last / or #
+            const parts = uri.split('/').pop().split('#').pop();
+            // Convert camelCase to Title Case with spaces
+            return parts
+                .replace(/([A-Z])/g, ' $1')
+                .replace(/^./, str => str.toUpperCase())
+                .trim();
+        }
+        
+        // Get enumeration values from a NodeShape that has sh:in
+        function getEnumerationValues(nodeShapeUri) {
+            if (!shaclShapesStore) return null;
+            
+            // Query for sh:in on this NodeShape
+            const inQuads = shaclShapesStore.getQuads(
+                nodeShapeUri,
+                'http://www.w3.org/ns/shacl#in',
+                null,
+                null
+            );
+            
+            if (inQuads.length === 0) return null;
+            
+            // Parse the RDF list
+            return parseRdfList(inQuads[0].object);
         }
         
         // Classify a property based on SHACL shapes
@@ -1621,7 +1743,7 @@
                                         result.description = descQuads[0].object.value;
                                     }
                                     
-                                    // Get sh:in (allowed values)
+                                    // Get sh:in (allowed values) - direct enumeration on property
                                     const inQuads = shaclShapesStore.getQuads(
                                         propertyShape,
                                         'http://www.w3.org/ns/shacl#in',
@@ -1629,9 +1751,19 @@
                                         null
                                     );
                                     if (inQuads.length > 0) {
-                                        // This is a controlled vocabulary - collect list values
-                                        result.allowedValues = [];
-                                        // TODO: Parse RDF list properly
+                                        // Parse RDF list to get enumeration values
+                                        result.allowedValues = parseRdfList(inQuads[0].object);
+                                    }
+                                    
+                                    // Check if sh:node references an enumeration shape
+                                    if (result.nodeShape && !result.allowedValues) {
+                                        const nodeShapeUri = result.nodeShape.startsWith('http') || result.nodeShape.startsWith('#') 
+                                            ? result.nodeShape 
+                                            : '#' + result.nodeShape;
+                                        const enumValues = getEnumerationValues(nodeShapeUri);
+                                        if (enumValues && enumValues.length > 0) {
+                                            result.allowedValues = enumValues;
+                                        }
                                     }
                                     
                                     // Get sh:pattern
@@ -2468,7 +2600,7 @@
                 // Use children().find() to get only direct properties, not nested node properties
                 $card.children('.node-body').find('.property-row.changed').each(function() {
                     const key = $(this).attr('data-property');
-                    const inputs = $(this).find('input, textarea');
+                    const inputs = $(this).find('input, textarea, select');
                     
                     console.log('collectChangesFromDOM: Updating', nodeId, key, 'with', inputs.length, 'inputs');
                     
