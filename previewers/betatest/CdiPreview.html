@@ -487,32 +487,34 @@
 </head>
 <body>
     <div class="toolbar">
-        <button id="toggle-edit-btn" class="btn btn-primary">
-            <span class="glyphicon glyphicon-edit"></span> Enable Editing
-        </button>
-        <button id="save-btn" class="btn btn-success hidden">
-            <span class="glyphicon glyphicon-floppy-disk"></span> Save Changes
-        </button>
-        <button id="add-root-node-btn" class="btn btn-primary hidden">
-            <span class="glyphicon glyphicon-plus-sign"></span> Add Root Node
-        </button>
-        <button id="validate-btn" class="btn btn-info">
-            <span class="glyphicon glyphicon-ok-circle"></span> Validate
-        </button>
-        <button id="export-btn" class="btn btn-default">
-            <span class="glyphicon glyphicon-download-alt"></span> Export JSON-LD
-        </button>
-        <button id="collapse-all-btn" class="btn btn-default">
-            <span class="glyphicon glyphicon-collapse-up"></span> Collapse All
-        </button>
-        <button id="expand-all-btn" class="btn btn-default">
-            <span class="glyphicon glyphicon-expand"></span> Expand All
-        </button>
-        <button id="filter-shacl-btn" class="btn btn-default" title="Toggle to show only SHACL-defined properties">
-            <span class="glyphicon glyphicon-filter"></span> Show SHACL Only
-        </button>
-        <span id="validation-status"></span>
-        <div style="float: right; display: flex; gap: 10px; align-items: center;">
+        <div style="margin-bottom: 15px;">
+            <button id="toggle-edit-btn" class="btn btn-primary">
+                <span class="glyphicon glyphicon-edit"></span> Enable Editing
+            </button>
+            <button id="save-btn" class="btn btn-success hidden">
+                <span class="glyphicon glyphicon-floppy-disk"></span> Save Changes
+            </button>
+            <button id="add-root-node-btn" class="btn btn-primary hidden">
+                <span class="glyphicon glyphicon-plus-sign"></span> Add Root Node
+            </button>
+            <button id="validate-btn" class="btn btn-info">
+                <span class="glyphicon glyphicon-ok-circle"></span> Validate
+            </button>
+            <button id="export-btn" class="btn btn-default">
+                <span class="glyphicon glyphicon-download-alt"></span> Export JSON-LD
+            </button>
+            <button id="collapse-all-btn" class="btn btn-default">
+                <span class="glyphicon glyphicon-collapse-up"></span> Collapse All
+            </button>
+            <button id="expand-all-btn" class="btn btn-default">
+                <span class="glyphicon glyphicon-expand"></span> Expand All
+            </button>
+            <button id="filter-shacl-btn" class="btn btn-default" title="Toggle to show only SHACL-defined properties">
+                <span class="glyphicon glyphicon-filter"></span> Show SHACL Only
+            </button>
+            <span id="validation-status"></span>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
             <label for="shape-selector" style="margin: 0; white-space: nowrap;">SHACL Shape:</label>
             <select id="shape-selector" class="form-control" style="width: 250px;">
                 <option value="ddi-cdi-official">DDI-CDI 1.0 (Official)</option>
@@ -521,7 +523,7 @@
                 <option value="custom">Custom URL...</option>
             </select>
             <input type="text" id="custom-shape-url" class="form-control" placeholder="Enter SHACL shape URL" style="width: 300px; display: none;">
-            <input type="text" id="search-input" class="form-control" placeholder="Search nodes and properties..." style="width: 300px;">
+            <input type="text" id="search-input" class="form-control" placeholder="Search nodes and properties..." style="width: 300px; margin-left: auto;">
         </div>
     </div>
 
