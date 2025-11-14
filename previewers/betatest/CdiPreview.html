@@ -528,6 +528,10 @@
     <div class="preview-header">
         <h3>CDI Data Viewer & Editor</h3>
         <p>Displaying DDI-CDI (Cross Domain Integration) metadata. Edit mode allows you to modify properties and validate against SHACL shapes.</p>
+        <div id="normalization-notice" style="display: none; margin-top: 10px; padding: 8px; background: #d1ecf1; border-left: 3px solid #17a2b8; border-radius: 3px;">
+            <span class="glyphicon glyphicon-info-sign" style="margin-right: 5px;"></span>
+            <strong>Note:</strong> This JSON-LD was automatically normalized to <code>@graph</code> format for editing. The structure has been preserved.
+        </div>
     </div>
 
     <div class="legend-box">
@@ -618,6 +622,7 @@
         let originalFileName = 'cdi-metadata.jsonld'; // Default filename
         let expandedJsonLd = null; // Store expanded JSON-LD for property URI lookup
         let currentShapeSource = 'ddi-cdi-official'; // Track currently loaded shape source
+        let hadOriginalGraph = true; // Track if original data had @graph (for export preservation)
         
         // SHACL shape URLs
         const SHAPE_URLS = {
@@ -721,6 +726,52 @@
             });
         }
 
+        // Normalize JSON-LD to @graph format
+        async function normalizeToGraphFormat(data) {
+            // Check if already has @graph
+            if (data['@graph']) {
+                console.log('Data already has @graph, no normalization needed');
+                hadOriginalGraph = true;
+                $('#normalization-notice').hide();
+                return data;
+            }
+            
+            console.log('Data does not have @graph, normalizing...');
+            hadOriginalGraph = false;
+            
+            try {
+                // Use jsonld.flatten() to convert to @graph format
+                // This handles nested structures and extracts all nodes into a flat array
+                const flattened = await jsonld.flatten(data);
+                
+                console.log('Successfully normalized to @graph format');
+                console.log('Original format:', Object.keys(data));
+                console.log('Normalized format:', Object.keys(flattened));
+                console.log('Graph nodes:', flattened['@graph'] ? flattened['@graph'].length : 0);
+                
+                // Show notice to user
+                $('#normalization-notice').show();
+                
+                return flattened;
+                
+            } catch (error) {
+                console.error('Failed to normalize JSON-LD:', error);
+                
+                // Fallback: manually wrap in @graph if it's a single object
+                if (data['@id'] || data['@type']) {
+                    console.log('Fallback: wrapping single object in @graph');
+                    $('#normalization-notice').show();
+                    return {
+                        '@context': data['@context'] || {},
+                        '@graph': [data]
+                    };
+                }
+                
+                // If all else fails, throw error
+                throw new Error('Unable to normalize JSON-LD structure. Please ensure the file is valid JSON-LD.');
+            }
+        }
+
         // Initialize
         $(document).ready(async function() {
             try {
@@ -818,9 +869,16 @@
                     throw new Error(`Failed to parse JSON: ${parseError.message}. This file may not be valid JSON-LD.`);
                 }
                 
-                // Validate it's JSON-LD with @graph
+                // Normalize to @graph format if needed
+                try {
+                    jsonData = await normalizeToGraphFormat(jsonData);
+                } catch (normalizeError) {
+                    throw new Error(`Failed to normalize JSON-LD structure: ${normalizeError.message}`);
+                }
+                
+                // Verify we now have @graph (should always be true after normalization)
                 if (!jsonData['@graph']) {
-                    throw new Error('Invalid CDI structure: Missing required "@graph" property. This previewer requires DDI-CDI JSON-LD files with a @graph array.');
+                    throw new Error('Internal error: Normalization did not produce @graph structure.');
                 }
                 
                 originalData = JSON.parse(JSON.stringify(jsonData)); // Deep clone
