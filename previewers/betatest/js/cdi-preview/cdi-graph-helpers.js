@@ -1,7 +1,9 @@
-// Graph and tree helpers for the CDI previewer.
+// === CDI Previewer: Graph and Tree Helpers ===
+//
+// Utilities for node ID expansion, type extraction, and graph traversal.
 //
 // Related responsibilities now live in:
-//  - cdi-shacl-sparql.js          (SHACL/SPARQL helpers)
+//  - cdi-shacl-loader.js          (SHACL shape loading helpers)
 //  - cdi-json-ld-helpers.js       (JSON-LD normalization)
 //  - core.js                      (Dataverse wiring and initialization)
 //  - render.js                    (tree rendering)

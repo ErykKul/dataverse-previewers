@@ -1,3 +1,7 @@
+// === CDI Previewer: Core Configuration and Initialization ===
+//
+// Global variables, logging, shape URLs, and main initialization logic.
+
 // Logging levels
 const LOG_LEVEL = {
   ERROR: 0,
@@ -43,24 +47,10 @@ let expandedJsonLd = null; // Store expanded JSON-LD for property URI lookup
 let currentShapeSource = "ddi-cdi-official"; // Track currently loaded shape source
 let hadOriginalGraph = true; // Track if original data had @graph (for export preservation)
 
-// Comunica SPARQL engine for sh:SPARQLTarget support
-let comunicaEngine = null;
-
-// SPARQL target cache for sh:SPARQLTarget support
-const sparqlTargetCache = {
-  queries: {}, // shapeUri → SPARQL query string
-  results: {}, // shapeUri → Set of matching node URIs
-  executed: false,
-  enabled: true, // Feature flag for easy disable if needed
-};
-
-// SHACL shape URLs
+// SHACL shape URLs (Core SHACL only - no SPARQL support)
 const SHAPE_URLS = {
   "ddi-cdi-official":
-    "https://raw.githubusercontent.com/ddi-cdi/ddi-cdi.github.io/main/m2t-ng/DDI-CDI_1-0/encoding/shacl/ddi-cdi.shacl.ttl",
-  "cdif-discovery":
-    "https://raw.githubusercontent.com/Cross-Domain-Interoperability-Framework/validation/main/CDIF-Discovery-Core-Shapes.ttl",
-  "cdif-discovery-local": "shapes/CDIF-Discovery-Core-Shapes.ttl",
+    "https://ddi-cdi.github.io/m2t-ng/DDI-CDI_1-0/encoding/shacl/ddi-cdi.shacl.ttl",
   "local-fallback": "shapes/ddi-cdi-official.ttl",
 };
 
@@ -213,16 +203,13 @@ $(document).ready(async function () {
     // Load SHACL shapes - use the selected shape from dropdown
     try {
       const selectedShape = $("#shape-selector").val() || "ddi-cdi-official";
-      await loadShaclShapes(selectedShape);
+      await loadShapes(selectedShape);
     } catch (shapeError) {
       console.error("Failed to load SHACL shapes:", shapeError);
       throw new Error(
         `Failed to load validation shapes: ${shapeError.message}`
       );
     }
-
-    // Execute SPARQL targets to match nodes to shapes
-    await executeSparqlTargets();
 
     // Render the data
     renderData();

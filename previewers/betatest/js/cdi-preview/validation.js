@@ -1,4 +1,4 @@
-// === CDI Previewer: SHACL Validation Logic ===
+// === CDI Previewer: SHACL Validation Logic (using rdf-validate-shacl) ===
 
 // Runs validation end-to-end on the current jsonData and updates #validation-status
 async function validateData() {
@@ -7,186 +7,101 @@ async function validateData() {
   );
 
   try {
-    // Convert JSON-LD to N3 Store using jsonld library
-    const dataStore = new N3.Store();
-
-    // Create a local copy without @context
-    const dataForValidation = JSON.parse(JSON.stringify(jsonData));
-
-    // Remove @context to avoid remote fetching - we'll use local namespace mapping
-    if (dataForValidation["@context"]) {
-      delete dataForValidation["@context"];
+    if (
+      !window.CdiShacl ||
+      !window.CdiShacl.SHACLValidator ||
+      !window.CdiShacl.rdf
+    ) {
+      throw new Error(
+        "SHACL validation engine is not loaded (CdiShacl bundle missing)"
+      );
     }
 
-    // Add a minimal local context for basic processing
-    dataForValidation["@context"] = {
-      "@vocab": "http://ddialliance.org/Specification/DDI-CDI/1.0/RDF/",
-    };
+    const { SHACLValidator, rdf } = window.CdiShacl;
 
-    // Custom document loader that prevents remote fetching
-    const documentLoader = jsonld.documentLoaders.xhr();
-    const customLoader = async (url) => {
-      console.log("Skipping remote context fetch:", url);
-      // Return empty context for any remote URLs
-      return {
-        contextUrl: null,
-        document: { "@context": {} },
-        documentUrl: url,
-      };
-    };
-
-    // Expand with custom loader
-    const expanded = await jsonld.expand(dataForValidation, {
-      documentLoader: customLoader,
-    });
-
-    // Convert expanded JSON-LD to N-Quads
-    const nquads = await jsonld.toRDF(expanded, {
-      format: "application/n-quads",
-      documentLoader: customLoader,
-    });
-
-    // Parse the N-Quads into the store
-    const parser = new N3.Parser({ format: "N-Quads" });
-
-    parser.parse(nquads, (error, quad, prefixes) => {
-      if (error) {
-        console.error("Parse error:", error);
-        $("#validation-status").html(
-          '<span class="validation-badge invalid">Parse Error: ' +
-            error.message +
-            "</span>"
-        );
-        return;
-      }
-
-      if (quad) {
-        dataStore.addQuad(quad);
-      } else {
-        // Parsing complete, run validation
-
-        runShaclValidation(dataStore);
-      }
-    });
-  } catch (error) {
-    console.error("Validation error:", error);
-    $("#validation-status").html(
-      '<span class="validation-badge invalid">Validation Error: ' +
-        error.message +
-        "</span>"
-    );
-  }
-}
-
-async function runShaclValidation(dataStore) {
-  try {
-    // Simple SHACL validation - check required properties and cardinality
-    const violations = [];
-    const warnings = [];
-
-    // Get all node shapes
-    const nodeShapes = shaclShapesStore.getSubjects(
-      N3.DataFactory.namedNode(
-        "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
-      ),
-      N3.DataFactory.namedNode("http://www.w3.org/ns/shacl#NodeShape"),
-      null
-    );
-
-    // For each node in data, check against its shape
-    for (const node of jsonData["@graph"] || []) {
-      const nodeId = N3.DataFactory.namedNode(node["@id"]);
-      const nodeType = node["@type"];
-
-      if (!nodeType) continue;
-
-      // Find matching shape by target class
-      const targetClassPred = N3.DataFactory.namedNode(
-        "http://www.w3.org/ns/shacl#targetClass"
+    // Prepare shapes dataset from shaclShapesStore (N3.Store -> DatasetCore)
+    const shapesDataset = rdf.dataset();
+    shaclShapesStore.getQuads(null, null, null, null).forEach((q) => {
+      shapesDataset.add(
+        rdf.quad(
+          rdf.fromTerm(q.subject),
+          rdf.fromTerm(q.predicate),
+          rdf.fromTerm(q.object),
+          q.graph && q.graph.termType !== "DefaultGraph"
+            ? rdf.fromTerm(q.graph)
+            : rdf.defaultGraph()
+        )
       );
-      const nodeTypeTerm = N3.DataFactory.namedNode(nodeType);
+    });
 
-      for (const shape of nodeShapes) {
-        const targetClasses = shaclShapesStore.getObjects(
-          shape,
-          targetClassPred,
-          null
-        );
+    // Prepare data dataset: convert jsonData to N3 store, then to RDF/JS dataset
+    const tempStore = await jsonLdToN3Store(jsonData);
+    const dataDataset = rdf.dataset();
 
-        if (targetClasses.some((tc) => tc.equals(nodeTypeTerm))) {
-          // Check properties for this shape
-          const propertyPred = N3.DataFactory.namedNode(
-            "http://www.w3.org/ns/shacl#property"
-          );
-          const propertyShapes = shaclShapesStore.getObjects(
-            shape,
-            propertyPred,
-            null
-          );
+    tempStore.getQuads(null, null, null, null).forEach((q) => {
+      dataDataset.add(
+        rdf.quad(
+          rdf.fromTerm(q.subject),
+          rdf.fromTerm(q.predicate),
+          rdf.fromTerm(q.object),
+          q.graph && q.graph.termType !== "DefaultGraph"
+            ? rdf.fromTerm(q.graph)
+            : rdf.defaultGraph()
+        )
+      );
+    });
 
-          for (const propShape of propertyShapes) {
-            const path = shaclShapesStore.getObjects(
-              propShape,
-              N3.DataFactory.namedNode("http://www.w3.org/ns/shacl#path"),
-              null
-            )[0];
-            const minCount = shaclShapesStore.getObjects(
-              propShape,
-              N3.DataFactory.namedNode("http://www.w3.org/ns/shacl#minCount"),
-              null
-            )[0];
-            const maxCount = shaclShapesStore.getObjects(
-              propShape,
-              N3.DataFactory.namedNode("http://www.w3.org/ns/shacl#maxCount"),
-              null
-            )[0];
+    // Run SHACL validation using rdf-validate-shacl
+    const validator = new SHACLValidator(shapesDataset, { factory: rdf });
+    const report = await validator.validate(dataDataset);
 
-            if (path && minCount) {
-              const pathStr = path.value.split("/").pop().split("#").pop();
-              const minCountVal = parseInt(minCount.value);
-              const actualCount = node[pathStr]
-                ? Array.isArray(node[pathStr])
-                  ? node[pathStr].length
-                  : 1
-                : 0;
+    validationReport = report;
 
-              if (actualCount < minCountVal) {
-                violations.push({
-                  focusNode: node["@id"],
-                  path: pathStr,
-                  message: `Required property '${pathStr}' is missing (minCount: ${minCountVal}, actual: ${actualCount})`,
-                });
-              }
-            }
+    const violations = [];
 
-            if (path && maxCount) {
-              const pathStr = path.value.split("/").pop().split("#").pop();
-              const maxCountVal = parseInt(maxCount.value);
-              const actualCount = node[pathStr]
-                ? Array.isArray(node[pathStr])
-                  ? node[pathStr].length
-                  : 1
-                : 0;
+    for (const result of report.results) {
+      // Map SHACL result to our simple violation structure
+      const focusNode =
+        result.focusNode && result.focusNode.value
+          ? result.focusNode.value
+          : null;
 
-              if (actualCount > maxCountVal) {
-                violations.push({
-                  focusNode: node["@id"],
-                  path: pathStr,
-                  message: `Property '${pathStr}' exceeds maxCount (maxCount: ${maxCountVal}, actual: ${actualCount})`,
-                });
-              }
-            }
+      let path = null;
+      if (result.path) {
+        if (result.path.value) {
+          // NamedNode path
+          path = result.path.value.split("/").pop().split("#").pop();
+        } else if (Array.isArray(result.path)) {
+          // Fallback for complex paths: take last named node if available
+          const lastSegment = result.path[result.path.length - 1];
+          if (lastSegment && lastSegment.value) {
+            path = lastSegment.value.split("/").pop().split("#").pop();
           }
         }
       }
+
+      const message =
+        Array.isArray(result.message) && result.message.length > 0
+          ? result.message[0].value || String(result.message[0])
+          : "SHACL constraint violation";
+
+      violations.push({
+        focusNode: focusNode || "unknown",
+        path: path || "unknown",
+        message,
+        severity: result.severity ? result.severity.value : null,
+      });
     }
 
-    const report = {
-      conforms: violations.length === 0,
-      results: violations,
-    };
-
-    validationReport = report;
+    // Log violations to console for debugging
+    if (violations.length > 0) {
+      console.log("Validation violations:");
+      violations.forEach((v, i) => {
+        console.log(`  ${i + 1}. ${v.focusNode}`);
+        console.log(`     Property: ${v.path}`);
+        console.log(`     Message: ${v.message}`);
+      });
+    }
 
     // Update UI
     if (report.conforms) {
@@ -195,25 +110,75 @@ async function runShaclValidation(dataStore) {
           '<span class="glyphicon glyphicon-ok-circle"></span> Valid' +
           "</span>"
       );
+      $("#validation-details").empty();
     } else {
       $("#validation-status").html(
         '<span class="validation-badge invalid">' +
           '<span class="glyphicon glyphicon-exclamation-sign"></span> ' +
           violations.length +
           " violation(s)" +
-          "</span>"
+          "</span>" +
+          '<button id="toggle-violations-btn" class="btn btn-sm btn-default" style="margin-left: 10px;">' +
+          '<span class="glyphicon glyphicon-chevron-down"></span> Show Details' +
+          "</button>"
       );
+
+      // Show violations list (initially hidden)
+      let detailsHtml =
+        '<div class="validation-violations" style="display: none;"><h4>Validation Violations:</h4><ul>';
+      violations.forEach((v, i) => {
+        const nodeId = v.focusNode.split("/").pop();
+        detailsHtml += `<li><strong>${nodeId}</strong> - ${v.path}: ${v.message}</li>`;
+      });
+      detailsHtml += "</ul></div>";
+      $("#validation-details").html(detailsHtml);
+
+      // Add toggle handler
+      $("#toggle-violations-btn").click(function () {
+        const $details = $(".validation-violations");
+        const $btn = $(this);
+        const $icon = $btn.find(".glyphicon");
+
+        if ($details.is(":visible")) {
+          $details.slideUp(200);
+          $icon
+            .removeClass("glyphicon-chevron-up")
+            .addClass("glyphicon-chevron-down");
+          $btn.html(
+            '<span class="glyphicon glyphicon-chevron-down"></span> Show Details'
+          );
+        } else {
+          $details.slideDown(200);
+          $icon
+            .removeClass("glyphicon-chevron-down")
+            .addClass("glyphicon-chevron-up");
+          $btn.html(
+            '<span class="glyphicon glyphicon-chevron-up"></span> Hide Details'
+          );
+        }
+      });
     }
 
     // Update property rows with validation results
     updatePropertyValidation(violations);
   } catch (error) {
-    console.error("SHACL validation error:", error);
+    console.error("Validation error:", error);
+
+    let errorMsg = error.message;
+
+    // Special handling for SPARQL constraint errors
+    if (error.message.includes("SPARQLConstraintComponent")) {
+      errorMsg =
+        "The selected SHACL shapes contain SPARQL constraints, which are not supported in the browser. " +
+        "Please use the 'DDI-CDI 1.0 (Official)' shapes instead, which use Core SHACL constraints only.";
+    }
+
     $("#validation-status").html(
-      '<span class="validation-badge invalid">Validation Engine Error: ' +
-        error.message +
+      '<span class="validation-badge invalid">Validation Error: ' +
+        errorMsg +
         "</span>"
     );
+    $("#validation-details").empty();
   }
 }
 
