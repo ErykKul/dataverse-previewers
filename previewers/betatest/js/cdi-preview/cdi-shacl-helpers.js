@@ -129,8 +129,21 @@ function classifyProperty(nodeTypes, propertyKey, nodeId = null) {
   if (propertyKey.includes(":") && jsonData && jsonData["@context"]) {
     const [prefix, localPart] = propertyKey.split(":");
     const context = jsonData["@context"];
-    if (context[prefix]) {
-      expandedPropertyKey = context[prefix] + localPart;
+    
+    // Handle array context (find the object that has the prefix)
+    let namespaceUri = null;
+    if (Array.isArray(context)) {
+      const contextObj = context.find((c) => typeof c === "object" && c[prefix]);
+      if (contextObj) {
+        namespaceUri = contextObj[prefix];
+      }
+    } else if (typeof context === "object" && context[prefix]) {
+      namespaceUri = context[prefix];
+    }
+    
+    if (namespaceUri) {
+      expandedPropertyKey = namespaceUri + localPart;
+      log(LOG_LEVEL.DEBUG, `Expanded property ${propertyKey} → ${expandedPropertyKey}`);
     }
   }
 
@@ -341,7 +354,7 @@ function classifyProperty(nodeTypes, propertyKey, nodeId = null) {
             const matches =
               pathName === propertyKey || // Exact match with full path name
               path === propertyKey || // Exact match with full URI
-              path === expandedPropertyKey || // Match with expanded property key (e.g., schema:name → https://schema.org/name)
+              path === expandedPropertyKey || // Match with expanded property key (e.g., schema:name → http://schema.org/name)
               shaclPropertyName === propertyKey || // Match extracted property name
               (expandedUri && path === expandedUri) || // Match with expanded URI if available
               pathName.endsWith(propertyKey) || // Ends with property key
